@@ -4,8 +4,8 @@
 #include "Matrix.hpp"
 #include "Shader.hpp"
 #include "Vector.hpp"
-#include "imgui.h"
 #include "models/Cursor.hpp"
+#include "models/Ground.hpp"
 #include "models/Line.hpp"
 #include "models/Object.hpp"
 #include "models/Point.hpp"
@@ -34,6 +34,8 @@ public:
   void update(bool &running);
 
 public:
+  static void scrollInputCallback(GLFWwindow *window, double xOffset,
+                                  double yOffset);
   static void keyInputCallback(GLFWwindow *window, int key, int scancode,
                                int action, int mods);
   static void cursorPositionCallback(GLFWwindow *window, double xpos,
@@ -41,15 +43,13 @@ public:
   static void mouseButtonCallback(GLFWwindow *window, int button, int action,
                                   int mods);
   static void resizeWindowCallback(GLFWwindow *window, int width, int height);
-  static int inputTextCallback(ImGuiInputTextCallbackData *data);
-  static bool InputText(const char *label, std::string &str,
-                        ImGuiInputTextFlags flags = 0);
 
 private:
   void renderImgui(float dt);
   void setVertexData();
   float project(float x, float y);
   void calculateSelectedMassCenter();
+  void setCursorPos(int x, int y);
 
 private:
   std::unique_ptr<GLFWwindow, GLFWwindowDeleter> m_window;
@@ -65,6 +65,7 @@ private:
   std::set<uint16_t> m_selectedLines;
   std::unique_ptr<Point> m_massCenter;
   std::unique_ptr<Cursor> m_cursor;
+  std::unique_ptr<Ground> m_ground;
 
   Mode m_mode;
   Tranformation m_transformation;
@@ -74,6 +75,7 @@ private:
 
   math137::Vector3f m_prevMose;
   math137::Matrix4f m_projection;
+  math137::Matrix4f m_invprojection;
   math137::Matrix4f m_view;
   std::vector<uint8_t> m_stencilData;
 

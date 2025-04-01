@@ -12,6 +12,7 @@ add_executable(${PROJECT_NAME}
   core/models/Point.cpp
   core/models/Line.cpp
   core/models/Cursor.cpp
+  core/models/Ground.cpp
 )
 
 set(CMAKE_BUILD_TYPE Debug)

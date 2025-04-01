@@ -1,7 +1,7 @@
 #include "Application.hpp"
 
 Application::Application()
-    : m_window(1024, 768, "Universal Interface for Virtual Space Interaction"),
+    : m_window(1600, 1200, "Universal Interface for Virtual Space Interaction"),
       m_isRunning(true) {}
 
 void Application::run() {

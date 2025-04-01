@@ -1,19 +1,60 @@
 #include "Camera.hpp"
+#include "Matrix.hpp"
 #include "MatrixUtils.hpp"
 #include "Vector.hpp"
+#include <cmath>
+#include <iostream>
 
-Camera::Camera(math137::Vector3f positon, math137::Vector3f front,
-               math137::Vector3f up)
-    : m_position(positon), m_front(front), m_up(up),
-      m_view(math137::MatrixUtils::Identity()) {}
-void Camera::recalculateView() {
-  m_view = math137::MatrixUtils::LookAt(m_position, m_position + m_front, m_up);
-}
-
-void Camera::rotateCamera(float dx, float dy) {
-  m_front.x(m_front.x() + dx);
-  m_front.y(m_front.y() + dy);
+Camera::Camera(float distance, math137::Vector3f target)
+    : m_distance(distance), m_target(target),
+      m_view(math137::MatrixUtils::Identity()) {
   recalculateView();
 }
 
-void Camera::moveCamera(float dx, float dy) { recalculateView(); }
+math137::Matrix4f Camera::getInverseView() const {
+  math137::Matrix4f matrix = m_view;
+  matrix.setValue(1, 0, m_view.getValue(0, 1));
+  matrix.setValue(2, 0, m_view.getValue(0, 2));
+  matrix.setValue(2, 1, m_view.getValue(1, 2));
+  matrix.setValue(0, 1, m_view.getValue(1, 0));
+  matrix.setValue(0, 2, m_view.getValue(2, 0));
+  matrix.setValue(1, 2, m_view.getValue(2, 1));
+  float x = matrix.getValue(0, 0) * m_view.getValue(0, 3) +
+            matrix.getValue(0, 1) * m_view.getValue(1, 3) +
+            matrix.getValue(0, 2) * m_view.getValue(2, 3);
+  float y = matrix.getValue(1, 0) * m_view.getValue(0, 3) +
+            matrix.getValue(1, 1) * m_view.getValue(1, 3) +
+            matrix.getValue(1, 2) * m_view.getValue(2, 3);
+  float z = matrix.getValue(2, 0) * m_view.getValue(0, 3) +
+            matrix.getValue(2, 1) * m_view.getValue(1, 3) +
+            matrix.getValue(2, 2) * m_view.getValue(2, 3);
+
+  matrix.setValue(0, 3, -x);
+  matrix.setValue(1, 3, -y);
+  matrix.setValue(2, 3, -z);
+
+  return matrix;
+}
+
+void Camera::recalculateView() {
+  float x = m_distance * cosf(m_pitch) * cosf(m_yaw);
+  float y = m_distance * sinf(m_pitch);
+  float z = m_distance * cosf(m_pitch) * sin(m_yaw);
+  m_position = math137::Vector3f(x, y, z) + m_target;
+  m_view = math137::MatrixUtils::LookAt(m_position, m_target, {0.f, 1.f, 0.f});
+}
+
+void Camera::rotateCamera(float dx, float dy) {
+  m_yaw += (sensitivity * dx);
+  m_pitch += (sensitivity * dy);
+  if (m_pitch > M_PI_2)
+    m_pitch = M_PI_2;
+  if (m_pitch < -M_PI_2)
+    m_pitch = -M_PI_2;
+  recalculateView();
+}
+
+void Camera::moveCamera(float dx) {
+  m_distance += dx;
+  recalculateView();
+}

@@ -40,17 +40,10 @@ public:
         math137::Vector3f(rotatedPos.b, rotatedPos.c, rotatedPos.d) + pivot;
     m_update = true;
   }
-  inline void scale(float s, const math137::Vector3f &pivot) {
-    if (fabsf((m_translation - pivot) * (m_translation - pivot)) < 1e-6) {
-      m_scale = m_scale * s;
-      m_update = true;
-      return;
-    }
+  void scale(float s, const math137::Vector3f &pivot) {
     math137::Vector3f axis = m_translation - pivot;
-    axis.normalize();
-    math137::Vector3f parallel = axis * (m_scale * axis);
-    math137::Vector3f perp = m_scale - parallel;
-    m_scale = (perp + parallel * s);
+    m_translation = pivot + (axis * s);
+    m_scale = m_scale * s;
     m_update = true;
   }
   math137::Matrix4f getModel();
