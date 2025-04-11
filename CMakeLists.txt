@@ -6,13 +6,19 @@ add_executable(${PROJECT_NAME}
   core/Window.cpp
   core/Application.cpp
   core/Camera.cpp
-  core/Shader.cpp
+  core/InputHandler.cpp
+  core/Scene.cpp
+  core/SceneManager.cpp
+  core/Transformations.cpp
+  core/render/Shader.cpp
+  core/render/Renderer.cpp
   core/models/Torus.cpp
   core/models/Object.cpp
   core/models/Point.cpp
-  core/models/Line.cpp
+  core/models/BezierCurve.cpp
   core/models/Cursor.cpp
   core/models/Ground.cpp
+  core/models/ObjectBuilder.cpp
 )
 
 set(CMAKE_BUILD_TYPE Debug)

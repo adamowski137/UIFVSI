@@ -1,0 +1,185 @@
+#include "BezierCurve.hpp"
+#include "Object.hpp"
+#include "Vector.hpp"
+#include "imgui.h"
+#include <GL/glew.h>
+#include <algorithm>
+#include <cstdint>
+#include <memory>
+#include <vector>
+
+uint16_t BezierCurve::s_count = 0;
+
+BezierCurve::BezierCurve(const std::vector<std::shared_ptr<Point>> &points)
+    : Object(ShaderType::CURVE), m_points(points.begin(), points.end()) {
+  glGenVertexArrays(1, &m_vao);
+  glGenBuffers(1, &m_vbo);
+  glGenBuffers(1, &m_ebo);
+  name = "BezierCurve " + std::to_string(s_count++);
+  glBindVertexArray(m_vao);
+  glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
+  glEnableVertexAttribArray(0);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ebo);
+  setVertices();
+  setEdges();
+}
+
+void BezierCurve::setVertices() const {
+  std::vector<float> points;
+  points.reserve(m_points.size() * 3);
+  for (uint16_t i = 0; i < m_points.size(); i++) {
+    if (std::shared_ptr<Point> sp = m_points[i].lock()) {
+      const math137::Vector3f &pos = sp->getTranslation();
+      points.push_back(pos.x());
+      points.push_back(pos.y());
+      points.push_back(pos.z());
+    }
+  }
+
+  if (m_points.size() < 2) {
+    return;
+  }
+
+  glBindVertexArray(m_vao);
+  glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ebo);
+  glBufferData(GL_ARRAY_BUFFER, points.size() * sizeof(float), points.data(),
+               GL_STATIC_DRAW);
+}
+
+void BezierCurve::setEdges() const {
+  std::vector<uint16_t> indices;
+  if (m_type == ShaderType::CURVE) {
+    indices.reserve((m_points.size() - 1) * 2);
+    for (uint16_t i = 0; i < m_points.size(); i++) {
+      indices.push_back(i);
+      if (i != 0 && i != m_points.size() - 1 && i % 3 == 0)
+        indices.push_back(i);
+    }
+  }
+  if (m_type == ShaderType::OBJECT) {
+    indices.reserve((m_points.size() - 1) * 2);
+    for (uint16_t i = 1; i < m_points.size(); i++) {
+      indices.push_back(i - 1);
+      indices.push_back(i);
+    }
+  }
+
+  glBindVertexArray(m_vao);
+  glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ebo);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint16_t),
+               indices.data(), GL_STATIC_DRAW);
+}
+
+void BezierCurve::render(std::shared_ptr<Renderer> &renderer,
+                         const math137::Vector4f &color) {
+  if (m_points.size() < 2)
+    return;
+  glBindVertexArray(m_vao);
+  glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ebo);
+  renderer->setShader(m_type);
+  renderer->setModel(getModel());
+  renderer->setColor(color);
+  if (m_type == ShaderType::OBJECT) {
+    glDrawElements(GL_LINES, (m_points.size() - 1) * 2, GL_UNSIGNED_SHORT, 0);
+  }
+  if (m_type == ShaderType::CURVE) {
+    uint16_t sizeFull = (m_points.size() - 1) / 3;
+    uint16_t sizeMissing = (m_points.size() - 1) % 3;
+    glPatchParameteri(GL_PATCH_VERTICES, 4);
+    renderer->setDegree(4);
+    glDrawElements(GL_PATCHES, 4 * sizeFull, GL_UNSIGNED_SHORT, 0);
+    glPatchParameteri(GL_PATCH_VERTICES, sizeMissing + 1);
+    if (sizeMissing == 0)
+      return;
+    renderer->setDegree(sizeMissing + 1);
+    glDrawElements(GL_PATCHES, sizeMissing + 1, GL_UNSIGNED_SHORT,
+                   (void *)(4 * sizeFull * sizeof(uint16_t)));
+  }
+}
+
+void BezierCurve::addPoint(std::shared_ptr<Point> p) {
+  m_points.push_back(p);
+  setVertices();
+  setEdges();
+}
+
+void BezierCurve::removePoint(const std::shared_ptr<Point> &p) {
+  for (int i = 0; i < m_points.size(); i++) {
+    if (m_points[i].lock() == p) {
+      m_points[i] = m_points.back();
+      m_points.pop_back();
+    }
+  }
+  setVertices();
+  setEdges();
+}
+
+void BezierCurve::notify() { setVertices(); }
+
+bool BezierCurve::containsPoint(const std::shared_ptr<Object> &p) const {
+  for (const auto &p2 : m_points) {
+    if (*p2.lock().get() == *p.get())
+      return true;
+  }
+  return false;
+}
+
+void BezierCurve::renderObjectMenu() {
+  if (!m_openMenu)
+    return;
+  static const char *modes[] = {"Curve", "Line"};
+
+  static int idx = 0;
+  ImGui::Begin(("Settings" + name).c_str(), &m_openMenu);
+  setNameMenu();
+  if (ImGui::Combo("Mode", &idx, modes, IM_ARRAYSIZE(modes))) {
+    if (idx == 0)
+      m_type = ShaderType::CURVE;
+    if (idx == 1)
+      m_type = ShaderType::OBJECT;
+    setEdges();
+  }
+  ImGui::Separator();
+  ImGui::Text("Points");
+  int deleteIndex = -1;
+  for (int i = 0; i < m_points.size(); i++) {
+    std::shared_ptr<Point> point = m_points[i].lock();
+    if (!point)
+      continue;
+    ImGui::PushID(i);
+
+    ImGui::Selectable((name.c_str() + point->name).c_str(), false,
+                      ImGuiSelectableFlags_AllowDoubleClick);
+    if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
+      deleteIndex = i;
+    }
+
+    if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
+      ImGui::SetDragDropPayload("DND_POINT", &i, sizeof(int));
+      ImGui::EndDragDropSource();
+    }
+
+    if (ImGui::BeginDragDropTarget()) {
+      if (const ImGuiPayload *payload =
+              ImGui::AcceptDragDropPayload("DND_POINT")) {
+        int srcIndex = *(const int *)payload->Data;
+        if (srcIndex != i) {
+          std::swap(m_points[srcIndex], m_points[i]);
+          setVertices();
+          setEdges();
+        }
+      }
+      ImGui::EndDragDropTarget();
+    }
+
+    ImGui::PopID();
+  }
+  ImGui::End();
+  if (deleteIndex != -1)
+    m_points.erase(m_points.begin() + deleteIndex);
+}
+void BezierCurve::recalculateModel() { m_update = false; }

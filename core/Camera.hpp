@@ -27,5 +27,5 @@ private:
   math137::Vector3f m_target;
   math137::Matrix4f m_view;
 
-  const float sensitivity = 1.f;
+  const float sensitivity = 0.01f;
 };

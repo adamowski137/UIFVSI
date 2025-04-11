@@ -1,0 +1,20 @@
+#pragma once
+#include "Object.hpp"
+#include "Point.hpp"
+#include "Quaternion.hpp"
+#include "Vector.hpp"
+#include <memory>
+#include <vector>
+class ObjectBuilder {
+public:
+  ObjectBuilder &withNewTorus(float R, float r);
+  ObjectBuilder &withNewPoint();
+  ObjectBuilder &withNewBezierCurve(std::vector<std::shared_ptr<Point>> points);
+  ObjectBuilder &withPosition(const math137::Vector3f &pos);
+  ObjectBuilder &withRotation(const math137::Quaternion &rot);
+  ObjectBuilder &withScale(const math137::Vector3f &scale);
+  std::shared_ptr<Object> build();
+
+private:
+  std::shared_ptr<Object> m_object;
+};

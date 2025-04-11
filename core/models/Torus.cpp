@@ -1,4 +1,6 @@
 #include "Torus.hpp"
+#include "Object.hpp"
+#include "Vector.hpp"
 #include <GL/glew.h>
 #include <cmath>
 #include <cstdint>
@@ -9,7 +11,8 @@
 uint16_t Torus::s_count = 0;
 
 Torus::Torus(float R, float r)
-    : m_R{R}, m_r{r}, m_alphaSamples(10), m_betaSamples(30) {
+    : Object(ShaderType::OBJECT), m_R{R}, m_r{r}, m_alphaSamples(10),
+      m_betaSamples(30) {
   glGenVertexArrays(1, &m_vao);
   glGenBuffers(1, &m_vbo);
   glGenBuffers(1, &m_ebo);
@@ -68,10 +71,14 @@ std::vector<uint32_t> Torus::getEdges() {
   return result;
 }
 
-void Torus::render() const {
+void Torus::render(std::shared_ptr<Renderer> &renderer,
+                   const math137::Vector4f &color) {
   glBindVertexArray(m_vao);
   glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ebo);
+  renderer->setShader(m_type);
+  renderer->setModel(getModel());
+  renderer->setColor(color);
   glDrawElements(GL_LINES, m_alphaSamples * m_betaSamples * 4, GL_UNSIGNED_INT,
                  0);
 }
@@ -88,7 +95,10 @@ void Torus::setVertexData() {
                indices.data(), GL_STATIC_DRAW);
 }
 void Torus::renderObjectMenu() {
-  ImGui::Text("Object: %s", name.c_str());
+  if (!m_openMenu)
+    return;
+  ImGui::Begin("Settings", &m_openMenu);
+  setNameMenu();
   ImGui::Text("Alpha samples");
   if (ImGui::SliderInt(("##alpha" + std::to_string(m_id)).c_str(),
                        &m_alphaSamples, 3, 100)) {
@@ -110,5 +120,5 @@ void Torus::renderObjectMenu() {
                          0.1, 0.5)) {
     setVertexData();
   }
-  ImGui::Separator();
+  ImGui::End();
 }

@@ -1,7 +1,9 @@
 #pragma once
 
 #include "Object.hpp"
+#include "Vector.hpp"
 #include <cstdint>
+#include <memory>
 #include <vector>
 class Torus : public Object {
 public:
@@ -11,7 +13,8 @@ public:
   inline float getBigR() { return m_R; }
 
   virtual void renderObjectMenu() override;
-  virtual void render() const override;
+  virtual void render(std::shared_ptr<Renderer> &renderer,
+                      const math137::Vector4f &color) override;
   void setRadius(float r, float R);
   std::vector<float> getMesh();
   std::vector<uint32_t> getEdges();

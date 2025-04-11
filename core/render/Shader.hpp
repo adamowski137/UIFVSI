@@ -5,10 +5,15 @@
 #include <GL/glew.h>
 #include <cstdint>
 #include <string>
+
+enum class ShaderType { OBJECT, POINT, CURVE };
+
 class Shader {
 public:
   Shader(std::string vertexShaderPath, std::string fragmentShaderPath);
-
+  Shader(std::string vertexShaderPath, std::string fragmentShaderPath,
+         std::string tessalationControlPath,
+         std::string tessalationEvaluationPath);
   inline void use() const { glUseProgram(m_id); };
 
   inline void setBool(const std::string &name, bool value) const {
@@ -61,6 +66,7 @@ public:
 
 private:
   void checkCompileErrors(uint32_t shader, std::string type);
+  std::string getShaderCode(std::string filePath);
 
   uint32_t m_id;
 };

@@ -1,30 +1,20 @@
 #pragma once
 
 #include "Camera.hpp"
-#include "Matrix.hpp"
-#include "Shader.hpp"
-#include "Vector.hpp"
-#include "models/Cursor.hpp"
-#include "models/Ground.hpp"
-#include "models/Line.hpp"
-#include "models/Object.hpp"
-#include "models/Point.hpp"
+#include "InputHandler.hpp"
+#include "Scene.hpp"
+#include "State.hpp"
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <cmath>
 #include <cstdint>
 #include <memory>
-#include <set>
 #include <string>
-#include <vector>
 
 class GLFWwindowDeleter {
 public:
   void operator()(GLFWwindow *ptr) { glfwDestroyWindow(ptr); }
 };
-
-enum class Mode { DEFAULT, MOVE, ROTATE, SCALE, CURSOR };
-enum class Tranformation { OBJECT, MASS, CURSOR };
 
 class Window {
 public:
@@ -46,46 +36,17 @@ public:
 
 private:
   void renderImgui(float dt);
-  void setVertexData();
-  float project(float x, float y);
-  void calculateSelectedMassCenter();
-  void setCursorPos(int x, int y);
 
 private:
   std::unique_ptr<GLFWwindow, GLFWwindowDeleter> m_window;
-  std::unique_ptr<Shader> m_baseShader;
-  std::unique_ptr<Shader> m_pointShader;
+  std::shared_ptr<Renderer> m_renderer;
+  std::unique_ptr<Scene> m_scene;
+
   Camera m_camera;
+  State m_state;
+  InputHandler m_inputHandler;
 
-  std::vector<std::shared_ptr<Point>> m_points;
-  std::vector<std::shared_ptr<Object>> m_objects;
-  std::vector<std::shared_ptr<Line>> m_lines;
-  std::set<uint16_t> m_selectedObjects;
-  std::set<uint16_t> m_selectedPoints;
-  std::set<uint16_t> m_selectedLines;
-  std::unique_ptr<Point> m_massCenter;
-  std::unique_ptr<Cursor> m_cursor;
-  std::unique_ptr<Ground> m_ground;
-
-  Mode m_mode;
-  Tranformation m_transformation;
-  bool m_activeMode;
-  bool m_alternativeMode;
   float m_t;
 
-  math137::Vector3f m_prevMose;
-  math137::Matrix4f m_projection;
-  math137::Matrix4f m_invprojection;
-  math137::Matrix4f m_view;
-  std::vector<uint8_t> m_stencilData;
-
-  uint16_t m_width;
-  uint16_t m_height;
-
   const float m_fov = (M_PI_4);
-  const math137::Vector4f m_defaultColor =
-      math137::Vector4f(1.f, 1.f, 0.f, 1.f);
-  const math137::Vector4f m_selectedColor =
-      math137::Vector4f(1.f, 0.2f, 0.2f, 1.f);
-  const math137::Vector4f m_centerColor = math137::Vector4f(1.f, 1.f, 1.f, 1.f);
 };

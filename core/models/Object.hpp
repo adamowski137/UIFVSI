@@ -1,16 +1,23 @@
 #pragma once
 
+#include "../render/Renderer.hpp"
+#include "../render/Shader.hpp"
 #include "Matrix.hpp"
 #include "Quaternion.hpp"
 #include "Vector.hpp"
 #include <cstdint>
+#include <memory>
 #include <string>
 
 class Object {
 public:
-  Object();
-  virtual ~Object() {}
+  Object(ShaderType type);
+  virtual ~Object();
 
+  math137::Matrix4f getModel();
+  inline math137::Quaternion getRotation() { return m_rotation; }
+  inline math137::Vector3f getTranslation() { return m_translation; }
+  inline math137::Vector3f getScale() { return m_scale; }
   inline void setTranslation(const math137::Vector3f &pos) {
     m_translation = pos;
     m_update = true;
@@ -31,47 +38,37 @@ public:
     m_rotation = m_rotation * rot;
     m_update = true;
   }
-  void rotate(const math137::Quaternion &rot, const math137::Vector3f &pivot) {
-    math137::Vector3f translatedPos = m_translation - pivot;
-    math137::Quaternion rotatedPos =
-        rot * math137::Quaternion::FromVector(translatedPos) * rot.conjugate();
-    m_rotation = rot * m_rotation;
-    m_translation =
-        math137::Vector3f(rotatedPos.b, rotatedPos.c, rotatedPos.d) + pivot;
-    m_update = true;
-  }
-  void scale(float s, const math137::Vector3f &pivot) {
-    math137::Vector3f axis = m_translation - pivot;
-    m_translation = pivot + (axis * s);
-    m_scale = m_scale * s;
-    m_update = true;
-  }
-  math137::Matrix4f getModel();
-  inline math137::Quaternion getRotation() { return m_rotation; }
-  inline math137::Vector3f getTranslation() { return m_translation; }
-  inline math137::Vector3f getScale() { return m_scale; }
-
-  void recalculateModel();
+  inline void setMenu(bool open) { m_openMenu = open; }
+  void rotate(const math137::Quaternion &rot, const math137::Vector3f &pivot);
+  void scale(float s, const math137::Vector3f &pivot);
   void setNameMenu();
-  virtual void renderObjectMenu() = 0;
-  virtual void render() const = 0;
 
-public:
+  virtual void renderObjectMenu() = 0;
+  virtual void render(std::shared_ptr<Renderer> &renderer,
+                      const math137::Vector4f &color) = 0;
+  virtual void notify() {}
+
   std::string name;
 
-protected:
-  uint16_t m_id;
+  bool operator==(const Object &o) { return m_id == o.m_id; }
 
+protected:
+  virtual void recalculateModel();
+
+  uint16_t m_id;
   uint32_t m_vao;
   uint32_t m_vbo;
   uint32_t m_ebo;
 
-private:
   math137::Vector3f m_translation;
   math137::Quaternion m_rotation;
   math137::Vector3f m_scale;
   math137::Matrix4f m_model;
-  bool m_update;
 
+  bool m_update;
+  bool m_openMenu;
+  ShaderType m_type;
+
+private:
   static uint16_t s_itemCount;
 };

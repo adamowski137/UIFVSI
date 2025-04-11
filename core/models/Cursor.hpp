@@ -1,21 +1,16 @@
 #pragma once
 
-#include "Matrix.hpp"
+#include "Object.hpp"
 #include "Vector.hpp"
+#include <memory>
 
-class Cursor {
+class Cursor : public Object {
 public:
   Cursor();
-  void render() const;
-  void setPosition(const math137::Vector3f &pos);
-  void move(const math137::Vector3f &pos);
-  math137::Vector3f getPosition() const;
+  void render(std::shared_ptr<Renderer> &renderer,
+              const math137::Vector4f &color) override;
+  void renderObjectMenu() override {};
 
-  inline math137::Matrix4f getModel() const { return m_model; }
-
-private:
-  math137::Matrix4f m_model;
-  uint32_t m_vao;
-  uint32_t m_vbo;
-  uint32_t m_ebo;
+protected:
+  void recalculateModel() override;
 };

@@ -1,0 +1,33 @@
+#version 460 core
+
+layout (vertices = 4) out;
+
+uniform mat4 model;
+uniform mat4 view;
+uniform mat4 projection;
+void main()
+{
+      if (gl_InvocationID == 0) {
+        vec4 p0 = model * view * projection * gl_in[0].gl_Position;
+        vec4 p1 = model * view * projection * gl_in[1].gl_Position;
+        vec4 p2 = model * view * projection * gl_in[2].gl_Position;
+        vec4 p3 = model * view * projection * gl_in[3].gl_Position;
+
+        vec2 s0 = p0.xy / p0.w;
+        vec2 s1 = p1.xy / p1.w;
+        vec2 s2 = p2.xy / p2.w;
+        vec2 s3 = p3.xy / p3.w;
+
+        float approxLength =
+            length(s1 - s0) +
+            length(s2 - s1) +
+            length(s3 - s2);
+
+        float tessLevel = clamp(approxLength * 40.0, 2.0, 32.0);
+
+        gl_TessLevelOuter[0] = tessLevel;
+        gl_TessLevelOuter[1] = tessLevel;
+    }
+	
+	gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
+}

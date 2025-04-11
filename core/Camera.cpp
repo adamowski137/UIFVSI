@@ -47,10 +47,10 @@ void Camera::recalculateView() {
 void Camera::rotateCamera(float dx, float dy) {
   m_yaw += (sensitivity * dx);
   m_pitch += (sensitivity * dy);
-  if (m_pitch > M_PI_2)
-    m_pitch = M_PI_2;
-  if (m_pitch < -M_PI_2)
-    m_pitch = -M_PI_2;
+  if (m_pitch >= M_PI_2)
+    m_pitch = M_PI_2 - 0.01f;
+  if (m_pitch <= -M_PI_2)
+    m_pitch = -M_PI_2 + 0.01f;
   recalculateView();
 }
 

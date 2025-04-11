@@ -1,0 +1,174 @@
+#include "InputHandler.hpp"
+#include "Quaternion.hpp"
+#include "State.hpp"
+#include "Transformations.hpp"
+#include "Vector.hpp"
+#include <GLFW/glfw3.h>
+#include <cstdint>
+#include <set>
+
+void InputHandler::registerMouseClick(int key, int action, float x, float y) {
+  MouseClickArgs mc{.start = m_startMouse,
+                    .end = math137::Vector2f(x, y),
+                    .key = key,
+                    .action = action};
+  m_eventQueue.emplace(mc);
+
+  if (key == GLFW_MOUSE_BUTTON_LEFT) {
+    m_leftMouse = action == GLFW_PRESS;
+    m_startMouse = math137::Vector2f(x, y);
+    m_prevMouse = math137::Vector2f(x, y);
+  }
+  if (key == GLFW_MOUSE_BUTTON_RIGHT) {
+    m_rightMouse = action == GLFW_PRESS;
+  }
+}
+
+void InputHandler::registerMouseMove(float x, float y) {
+  if (!m_leftMouse)
+    return;
+
+  MoveArgs mm{.end = math137::Vector2f{x, y}, .start = m_prevMouse};
+  m_eventQueue.emplace(mm);
+  m_prevMouse = math137::Vector2f(x, y);
+}
+
+void InputHandler::registerKeyPress(int key, int action) {
+  KeyPressArgs kp{.key = key, .action = action};
+  m_eventQueue.emplace(kp);
+  m_keyboard[key] = action == GLFW_PRESS;
+}
+
+void InputHandler::registerMouseScroll(float dx) {
+  ScrollArgs sc{.dx = dx};
+  m_eventQueue.emplace(sc);
+}
+
+float InputHandler::project(float x, float y) {
+  float r = 1.0f;
+  float d = x * x + y * y;
+  if (2 * d <= r * r) {
+    return sqrtf(r * r - d);
+  }
+  return r * r / (2 * sqrtf(d));
+}
+
+void InputHandler::handleEvents(const std::unique_ptr<Scene> &scene,
+                                State &state, Camera &camera) {
+  while (!m_eventQueue.empty()) {
+    InputEvent event = m_eventQueue.front();
+    m_eventQueue.pop();
+
+    switch (event.type) {
+    case EventType::MOVE: {
+      math137::Vector2f end = event.move.end;
+      math137::Vector2f start = event.move.start;
+      math137::Vector2f positonChange = end - start;
+      if (positonChange * positonChange < 1e-6)
+        break;
+      switch (state.getMode()) {
+      case Mode::MOVE: {
+        Transformations::MoveSelected(
+            scene, positonChange.x() / state.getWidth(),
+            m_keyboard[GLFW_KEY_LEFT_CONTROL]
+                ? 0
+                : positonChange.y() / state.getHeight(),
+            m_keyboard[GLFW_KEY_LEFT_CONTROL]
+                ? positonChange.y() / state.getHeight()
+                : 0);
+        break;
+      }
+      case Mode::ROTATE: {
+        float ndcsx = (2 * start.x()) / (state.getWidth() - 1) - 1.f;
+        float ndcsy = 1.f - (2 * start.y()) / (state.getHeight() - 1);
+        float ndcex = (2 * end.x()) / (state.getWidth() - 1) - 1.f;
+        float ndcey = 1.f - (2 * end.y()) / (state.getHeight() - 1);
+        float psz = project(ndcsx, ndcsy);
+        float pez = project(ndcex, ndcey);
+        Transformations::RotateSelected(
+            scene, state,
+            math137::Quaternion::FromVectors({ndcsx, ndcsy, psz},
+                                             {ndcex, ndcey, pez}));
+        break;
+      }
+      case Mode::SCALE: {
+        Transformations::ScaleSelected(scene, state,
+                                       positonChange.y() / state.getHeight());
+        break;
+      }
+      case Mode::CAMERA: {
+        camera.rotateCamera(positonChange.x(), positonChange.y());
+        break;
+      }
+      default:
+        break;
+      }
+      break;
+    }
+    case EventType::SCROLL: {
+      camera.changeDistance(-event.scroll.dx);
+      break;
+    }
+    case EventType::KEY_PRESS: {
+      int key = event.keyPress.key;
+      int action = event.keyPress.action;
+      if (action == GLFW_RELEASE && key == GLFW_KEY_D) {
+        state.setMode(Mode::DEFAULT);
+      }
+      if (action == GLFW_RELEASE && key == GLFW_KEY_C) {
+        state.setMode(Mode::CAMERA);
+      }
+      if (action == GLFW_RELEASE && key == GLFW_KEY_M) {
+        state.setMode(Mode::MOVE);
+      }
+      if (action == GLFW_RELEASE && key == GLFW_KEY_R) {
+        state.setMode(Mode::ROTATE);
+      }
+      if (action == GLFW_RELEASE && key == GLFW_KEY_S) {
+        state.setMode(Mode::SCALE);
+      }
+      if (action == GLFW_RELEASE && key == GLFW_KEY_O) {
+        state.setTransformation(Transformation::OBJECT);
+      }
+      if (action == GLFW_RELEASE && key == GLFW_KEY_Z) {
+        state.setTransformation(Transformation::CURSOR);
+      }
+      if (action == GLFW_RELEASE && key == GLFW_KEY_X) {
+        state.setTransformation(Transformation::MASS);
+      }
+      break;
+    }
+    case EventType::MOUSE_CLICK: {
+      int key = event.mouseClick.key;
+      int action = event.mouseClick.action;
+      math137::Vector2f start = event.mouseClick.start;
+      math137::Vector2f end = event.mouseClick.end;
+      if (action == GLFW_RELEASE && key == GLFW_MOUSE_BUTTON_RIGHT) {
+        float ndcsx = (2 * end.x()) / (state.getWidth() - 1) - 1.f;
+        float ndcsy = 1.f - (2 * end.y()) / (state.getHeight() - 1);
+        Transformations::SetCursor(scene, camera, ndcsx, ndcsy);
+      }
+      if (action == GLFW_RELEASE && key == GLFW_MOUSE_BUTTON_LEFT &&
+          state.getMode() == Mode::DEFAULT) {
+        uint16_t startX = fminf(end.x(), start.x());
+        uint16_t startY = fminf(end.y(), start.y());
+        uint16_t endX = fmaxf(end.x(), start.x());
+        uint16_t endY = fmaxf(end.y(), start.y());
+        int size = 10;
+        uint16_t height = fmax(endY - startY, size);
+        uint16_t width = fmax(endX - startX, size);
+        glReadPixels(startX - size / 2, startY - size / 2, width, height,
+                     GL_STENCIL_INDEX, GL_UNSIGNED_BYTE,
+                     state.stencilData.data());
+        std::set<uint8_t> data(state.stencilData.begin(),
+                               state.stencilData.begin() + height * width);
+        scene->selectObjects(data, m_keyboard[GLFW_KEY_LEFT_CONTROL]);
+        scene->recalculateMassCenter();
+      }
+      break;
+    }
+    default:
+      break;
+    }
+  }
+}

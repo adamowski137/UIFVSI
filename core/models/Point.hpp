@@ -1,31 +1,26 @@
 #pragma once
 
-#include "Matrix.hpp"
-#include "Quaternion.hpp"
+#include "Object.hpp"
 #include "Vector.hpp"
 #include <cstdint>
-#include <string>
+#include <memory>
 #include <vector>
-class Point {
+
+class Point : public Object {
 public:
   Point();
-  void render() const;
-  void setPosition(const math137::Vector3f &pos);
-  void rotate(const math137::Quaternion &rot, const math137::Vector3f &pivot);
-  void move(const math137::Vector3f &pos);
-  math137::Matrix4f getModel() const;
-  math137::Vector3f getPosition() const;
+  ~Point() {}
 
-  std::string name;
+  void renderObjectMenu() override;
+  void render(std::shared_ptr<Renderer> &renderer,
+              const math137::Vector4f &color) override;
+
+protected:
+  void recalculateModel() override;
 
 private:
   std::vector<float> getSphereVertices();
   std::vector<uint16_t> getSphereIndices();
-
-  math137::Matrix4f m_model;
-  uint32_t m_vao;
-  uint32_t m_vbo;
-  uint32_t m_ebo;
 
   const uint16_t m_latSamples = 100;
   const uint16_t m_longSamples = 100;
