@@ -6,7 +6,7 @@
 #include <cstdint>
 #include <string>
 
-enum class ShaderType { OBJECT, POINT, CURVE };
+enum class ShaderType { OBJECT, POINT, CURVE, SURFACE };
 
 class Shader {
 public:
@@ -18,6 +18,9 @@ public:
 
   inline void setBool(const std::string &name, bool value) const {
     glUniform1i(glGetUniformLocation(m_id, name.c_str()), (int)value);
+  }
+  inline void setUInt(const std::string &name, uint32_t value) const {
+    glUniform1ui(glGetUniformLocation(m_id, name.c_str()), value);
   }
   inline void setInt(const std::string &name, int value) const {
     glUniform1i(glGetUniformLocation(m_id, name.c_str()), value);

@@ -1,5 +1,5 @@
 #include "Torus.hpp"
-#include "Object.hpp"
+#include "../Object.hpp"
 #include "Vector.hpp"
 #include <GL/glew.h>
 #include <cmath>
@@ -94,9 +94,9 @@ void Torus::setVertexData() {
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint32_t),
                indices.data(), GL_STATIC_DRAW);
 }
-void Torus::renderObjectMenu() {
+bool Torus::renderObjectMenu() {
   if (!m_openMenu)
-    return;
+    return false;
   ImGui::Begin("Settings", &m_openMenu);
   setNameMenu();
   ImGui::Text("Alpha samples");
@@ -121,4 +121,5 @@ void Torus::renderObjectMenu() {
     setVertexData();
   }
   ImGui::End();
+  return false;
 }

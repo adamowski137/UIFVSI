@@ -7,7 +7,9 @@ Renderer::Renderer()
     : m_objectShader("../shaders/base.vs", "../shaders/base.fs"),
       m_pointShader("../shaders/point.vs", "../shaders/point.fs"),
       m_curveShader("../shaders/bernstein.vs", "../shaders/bernstein.fs",
-                    "../shaders/bernstein.tes", "../shaders/bernstein.eval") {
+                    "../shaders/bernstein.tes", "../shaders/bernstein.eval"),
+      m_surfaceShader("../shaders/surface.vs", "../shaders/surface.fs",
+                      "../shaders/surface.tes", "../shaders/surface.eval") {
   m_selectedShader = &m_objectShader;
   m_selectedShader->use();
 }
@@ -19,6 +21,8 @@ void Renderer::setProjection(const math137::Matrix4f &projection) {
   m_pointShader.setMat4("projection", projection);
   m_curveShader.use();
   m_curveShader.setMat4("projection", projection);
+  m_surfaceShader.use();
+  m_surfaceShader.setMat4("projection", projection);
   m_selectedShader->use();
 }
 
@@ -29,6 +33,8 @@ void Renderer::setView(const math137::Matrix4f &view) {
   m_pointShader.setMat4("view", view);
   m_curveShader.use();
   m_curveShader.setMat4("view", view);
+  m_surfaceShader.use();
+  m_surfaceShader.setMat4("view", view);
   m_selectedShader->use();
 }
 
@@ -46,7 +52,11 @@ void Renderer::setShader(const ShaderType type) {
   case ShaderType::CURVE:
     m_selectedShader = &m_curveShader;
     break;
+  case ShaderType::SURFACE:
+    m_selectedShader = &m_surfaceShader;
+    break;
   }
+
   m_selectedShader->use();
 }
 
@@ -60,4 +70,8 @@ void Renderer::setColor(const math137::Vector4f &color) {
 
 void Renderer::setModel(const math137::Matrix4f &model) {
   m_selectedShader->setMat4("model", model);
+}
+void Renderer::setUVSubdivisions(uint16_t u, uint16_t v) {
+  m_selectedShader->setUInt("u_subdivisions", u);
+  m_selectedShader->setUInt("v_subdivisions", v);
 }

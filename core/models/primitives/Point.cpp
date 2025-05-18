@@ -1,7 +1,8 @@
 #include "Point.hpp"
+#include "../Object.hpp"
 #include "MatrixUtils.hpp"
-#include "Object.hpp"
 #include "Vector.hpp"
+#include "imgui.h"
 #include <GL/glew.h>
 #include <cstdint>
 #include <memory>
@@ -84,10 +85,14 @@ void Point::render(std::shared_ptr<Renderer> &renderer,
                  GL_UNSIGNED_SHORT, 0);
 }
 
-void Point::renderObjectMenu() {
+bool Point::renderObjectMenu() {
+  bool change = false;
   if (!m_openMenu)
-    return;
-  setNameMenu();
+    return false;
+  ImGui::Begin((name + " options").c_str(), &m_openMenu);
+  change = setNameMenu();
+  ImGui::End();
+  return change;
 }
 
 void Point::recalculateModel() {

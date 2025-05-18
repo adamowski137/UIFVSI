@@ -1,10 +1,15 @@
 #pragma once
 
+#include "Vector.hpp"
 #include "models/Object.hpp"
+#include "models/primitives/Cursor.hpp"
+#include "models/primitives/Point.hpp"
+#include "models/surfaces/SurfaceBuilder.hpp"
 #include <cstdint>
 #include <map>
 #include <memory>
 #include <set>
+#include <vector>
 
 struct ObjectPtrCompare {
   bool operator()(const std::weak_ptr<Object> &o1,
@@ -13,18 +18,100 @@ struct ObjectPtrCompare {
   }
 };
 
+struct VirtualObjectData {
+  VirtualObjectData() : index(0), parent(), prevPos() {}
+  VirtualObjectData(uint16_t index, std::weak_ptr<Object> parent,
+                    const math137::Vector3f &prev)
+      : index(index), parent(parent), prevPos(prev) {}
+  uint16_t index;
+  std::weak_ptr<Object> parent;
+  math137::Vector3f prevPos;
+};
+
 class SceneManager {
 public:
-  SceneManager() : m_observers() {}
+  SceneManager()
+      : m_observers(), m_parentObjects(), m_virtualObjects(), m_notifyQueue() {}
   void notify(const std::weak_ptr<Object> &obj);
-  void addObject(const std::weak_ptr<Object> &obj);
+  void addObject(const std::shared_ptr<Object> &obj);
   void deleteObject(const std::weak_ptr<Object> &obj);
   void addObserver(const std::weak_ptr<Object> &obj,
                    const std::weak_ptr<Object> &observer);
   void deleteObserver(const std::weak_ptr<Object> &obj,
                       const std::weak_ptr<Object> &observer);
+  void selectObjects(const std::set<uint8_t> &indices, bool add);
+  void addBezierCurve();
+  void addBspline();
+  void addIBspline();
+  void addPoint();
+
+  void addVirtualObjects(const std::weak_ptr<Object> &parent);
+  void deleteVirtualObjects(const std::weak_ptr<Object> &parent);
+  void deleteVirtualObjects();
+  void deleteSelected();
+  void update();
+  void recalculateMassCenter();
+  void toggleSelection(const std::weak_ptr<Object> &obj);
+  bool isSelected(const std::weak_ptr<Object> &obj) const;
+  bool isVirtual(const std::weak_ptr<Object> &obj) const;
+  void notifyQueue();
+
+  std::vector<std::weak_ptr<Object>> getDrawableObjects() const;
+
+  inline std::vector<std::weak_ptr<Object>> getSelected() const {
+    return m_selectedObjects;
+  }
+  inline std::vector<std::shared_ptr<Object>> getObjects() const {
+    return m_objects;
+  }
+
+  inline void setCursorPosition(const math137::Vector3f &pos) {
+    m_cursor.setTranslation(pos);
+  }
+  inline math137::Vector3f getCursorPosition() {
+    return m_cursor.getTranslation();
+  }
+  inline math137::Vector3f getMassCenter() {
+    return m_massCenter.getTranslation();
+  }
+  inline void setInvProjection(const math137::Matrix4f &m) {
+    m_invprojection = m;
+  }
+  inline math137::Matrix4f getInvProjection() { return m_invprojection; }
+
+  template <typename T>
+  void addSurface(int uPatches, int vPatches, bool cylinder, float p1,
+                  float p2) {
+    auto [surface, points] = SurfaceBuilder::NewPatch<T>(
+        uPatches, vPatches, m_cursor.getTranslation(), cylinder, p1, p2);
+    for (const auto &p : points) {
+      addObject(p);
+    }
+    addObject(surface);
+    for (const auto &point : points) {
+      addObserver(point, surface);
+    }
+  }
+
+  Point m_massCenter;
+  Cursor m_cursor;
 
 private:
-  std::map<uintptr_t, std::set<std::weak_ptr<Object>, ObjectPtrCompare>>
+  // TODO: figure where to put this
+  math137::Matrix4f m_invprojection;
+  // objects
+  std::vector<std::shared_ptr<Object>> m_objects;
+  std::vector<std::weak_ptr<Object>> m_allObjects;
+  std::set<std::weak_ptr<Object>, ObjectPtrCompare> m_notifyQueue;
+
+  // relations
+  std::vector<std::weak_ptr<Object>> m_selectedObjects;
+  std::map<std::weak_ptr<Object>,
+           std::set<std::weak_ptr<Object>, ObjectPtrCompare>, ObjectPtrCompare>
       m_observers;
+  std::map<std::weak_ptr<Object>, VirtualObjectData, ObjectPtrCompare>
+      m_virtualObjects;
+  std::map<std::weak_ptr<Object>,
+           std::set<std::weak_ptr<Object>, ObjectPtrCompare>, ObjectPtrCompare>
+      m_parentObjects;
 };

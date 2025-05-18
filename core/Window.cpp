@@ -6,7 +6,6 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
-#include "models/Torus.hpp"
 #include <GL/gl.h>
 #include <cmath>
 #include <cstdint>
@@ -14,6 +13,123 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+
+#define DEBUG 1
+
+GLenum glCheckError_(const char *file, int line) {
+  GLenum errorCode;
+  while ((errorCode = glGetError()) != GL_NO_ERROR) {
+    std::string error;
+    switch (errorCode) {
+    case GL_INVALID_ENUM:
+      error = "INVALID_ENUM";
+      break;
+    case GL_INVALID_VALUE:
+      error = "INVALID_VALUE";
+      break;
+    case GL_INVALID_OPERATION:
+      error = "INVALID_OPERATION";
+      break;
+    case GL_STACK_OVERFLOW:
+      error = "STACK_OVERFLOW";
+      break;
+    case GL_STACK_UNDERFLOW:
+      error = "STACK_UNDERFLOW";
+      break;
+    case GL_OUT_OF_MEMORY:
+      error = "OUT_OF_MEMORY";
+      break;
+    case GL_INVALID_FRAMEBUFFER_OPERATION:
+      error = "INVALID_FRAMEBUFFER_OPERATION";
+      break;
+    }
+    std::cout << error << " | " << file << " (" << line << ")" << std::endl;
+  }
+  return errorCode;
+}
+
+void APIENTRY glDebugOutput(GLenum source, GLenum type, unsigned int id,
+                            GLenum severity, GLsizei length,
+                            const char *message, const void *userParam) {
+  // ignore non-significant error/warning codes
+  if (id == 131169 || id == 131185 || id == 131218 || id == 131204)
+    return;
+
+  std::cout << "---------------" << std::endl;
+  std::cout << "Debug message (" << id << "): " << message << std::endl;
+
+  switch (source) {
+  case GL_DEBUG_SOURCE_API:
+    std::cout << "Source: API";
+    break;
+  case GL_DEBUG_SOURCE_WINDOW_SYSTEM:
+    std::cout << "Source: Window System";
+    break;
+  case GL_DEBUG_SOURCE_SHADER_COMPILER:
+    std::cout << "Source: Shader Compiler";
+    break;
+  case GL_DEBUG_SOURCE_THIRD_PARTY:
+    std::cout << "Source: Third Party";
+    break;
+  case GL_DEBUG_SOURCE_APPLICATION:
+    std::cout << "Source: Application";
+    break;
+  case GL_DEBUG_SOURCE_OTHER:
+    std::cout << "Source: Other";
+    break;
+  }
+  std::cout << std::endl;
+
+  switch (type) {
+  case GL_DEBUG_TYPE_ERROR:
+    std::cout << "Type: Error";
+    break;
+  case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR:
+    std::cout << "Type: Deprecated Behaviour";
+    break;
+  case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:
+    std::cout << "Type: Undefined Behaviour";
+    break;
+  case GL_DEBUG_TYPE_PORTABILITY:
+    std::cout << "Type: Portability";
+    break;
+  case GL_DEBUG_TYPE_PERFORMANCE:
+    std::cout << "Type: Performance";
+    break;
+  case GL_DEBUG_TYPE_MARKER:
+    std::cout << "Type: Marker";
+    break;
+  case GL_DEBUG_TYPE_PUSH_GROUP:
+    std::cout << "Type: Push Group";
+    break;
+  case GL_DEBUG_TYPE_POP_GROUP:
+    std::cout << "Type: Pop Group";
+    break;
+  case GL_DEBUG_TYPE_OTHER:
+    std::cout << "Type: Other";
+    break;
+  }
+  std::cout << std::endl;
+
+  switch (severity) {
+  case GL_DEBUG_SEVERITY_HIGH:
+    std::cout << "Severity: high";
+    break;
+  case GL_DEBUG_SEVERITY_MEDIUM:
+    std::cout << "Severity: medium";
+    break;
+  case GL_DEBUG_SEVERITY_LOW:
+    std::cout << "Severity: low";
+    break;
+  case GL_DEBUG_SEVERITY_NOTIFICATION:
+    std::cout << "Severity: notification";
+    break;
+  }
+  std::cout << std::endl;
+  std::cout << std::endl;
+}
+
+#define glCheckError() glCheckError_(__FILE__, __LINE__)
 
 Window::Window(uint16_t width, uint16_t height, std::string title)
     : m_camera(1.f, {0.0f, 0.0f, -1.0f}) {
@@ -40,6 +156,15 @@ Window::Window(uint16_t width, uint16_t height, std::string title)
 
   glEnable(GL_DEPTH_TEST);
   glEnable(GL_STENCIL_TEST);
+#if DEBUG
+  glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, true);
+  glEnable(GL_DEBUG_OUTPUT);
+  glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+  glDebugMessageCallback(glDebugOutput, nullptr);
+  glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr,
+                        GL_TRUE);
+
+#endif // 0
   glStencilMask(0xff);
   glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
   glfwSetWindowUserPointer(m_window.get(), reinterpret_cast<void *>(this));
@@ -48,13 +173,13 @@ Window::Window(uint16_t width, uint16_t height, std::string title)
   glfwSetMouseButtonCallback(m_window.get(), mouseButtonCallback);
   glfwSetCursorPosCallback(m_window.get(), cursorPositionCallback);
   glfwSetFramebufferSizeCallback(m_window.get(), resizeWindowCallback);
-  m_scene = std::make_unique<Scene>();
   m_renderer = std::make_shared<Renderer>();
+  m_scene = std::make_unique<Scene>();
+  m_manager = std::make_unique<SceneManager>();
   m_renderer->setProjection(math137::MatrixUtils::Projection(
       m_fov, (float)width / (float)height, 0.1f, 100.f));
-  m_scene->setInvProjection(math137::MatrixUtils::InvProjection(
+  m_manager->setInvProjection(math137::MatrixUtils::InvProjection(
       m_fov, (float)width / (float)height, 0.1f, 100.f));
-  m_scene->addObject(std::make_shared<Torus>(0.5f, 0.1f));
 }
 
 Window::~Window() {
@@ -71,21 +196,23 @@ void Window::update(bool &running) {
   glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
   m_renderer->setView(m_camera.getView());
-  m_scene->render(m_renderer);
+  m_manager->notifyQueue();
+  m_scene->render(m_renderer, m_manager);
 
   float t = glfwGetTime();
   renderImgui(t - m_t);
-  m_t = t;
+
   glfwSwapBuffers(m_window.get());
   glfwPollEvents();
-  m_inputHandler.handleEvents(m_scene, m_state, m_camera);
+  m_inputHandler.handleEvents(m_manager, m_state, m_camera, t - m_t);
+  m_t = t;
 }
 
 void Window::renderImgui(float dt) {
   ImGui_ImplOpenGL3_NewFrame();
   ImGui_ImplGlfw_NewFrame();
   ImGui::NewFrame();
-  m_scene->renderMenu();
+  m_scene->renderMenu(m_manager);
   ImGui::Text("%d frames", (int)(1 / dt));
   ImGui::Render();
   ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -129,6 +256,6 @@ void Window::resizeWindowCallback(GLFWwindow *window, int width, int height) {
   glViewport(0, 0, width, height);
   w->m_renderer->setProjection(math137::MatrixUtils::Projection(
       w->m_fov, (float)width / height, 0.1f, 100.f));
-  w->m_scene->setInvProjection(math137::MatrixUtils::InvProjection(
+  w->m_manager->setInvProjection(math137::MatrixUtils::InvProjection(
       w->m_fov, (float)width / height, 0.1f, 100.f));
 }

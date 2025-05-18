@@ -1,9 +1,8 @@
 #include "Cursor.hpp"
-#include "Object.hpp"
+#include "../Object.hpp"
 #include "Vector.hpp"
 #include <GL/glew.h>
 #include <MatrixUtils.hpp>
-#include <iostream>
 #include <memory>
 
 Cursor::Cursor() : Object(ShaderType::OBJECT) {

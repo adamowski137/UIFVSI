@@ -108,12 +108,12 @@ void Shader::checkCompileErrors(GLuint shader, std::string type) {
     if (!success) {
       glGetShaderInfoLog(shader, 1024, NULL, infoLog);
       throw std::runtime_error(type + infoLog);
-    } else {
-      glGetProgramiv(shader, GL_LINK_STATUS, &success);
-      if (!success) {
-        glGetProgramInfoLog(shader, 1024, NULL, infoLog);
-        throw std::runtime_error(type + infoLog);
-      }
+    }
+  } else {
+    glGetProgramiv(shader, GL_LINK_STATUS, &success);
+    if (!success) {
+      glGetProgramInfoLog(shader, 1024, NULL, infoLog);
+      throw std::runtime_error(type + infoLog);
     }
   }
 }

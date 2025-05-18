@@ -11,7 +11,12 @@ public:
   inline math137::Vector3f getPosition() const { return m_position; }
   math137::Matrix4f getInverseView() const;
   void rotateCamera(float dx, float dy);
-  void moveCamera(float dx);
+
+  inline void moveTarget(const math137::Vector3f &v) {
+    m_target = m_target + v;
+    recalculateView();
+  }
+
   inline void changeDistance(float dx) {
     m_distance += dx;
     recalculateView();

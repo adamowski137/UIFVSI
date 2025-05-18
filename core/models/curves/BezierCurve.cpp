@@ -1,20 +1,15 @@
 #include "BezierCurve.hpp"
-#include "Object.hpp"
 #include "Vector.hpp"
 #include "imgui.h"
 #include <GL/glew.h>
-#include <algorithm>
 #include <cstdint>
-#include <memory>
+#include <numeric>
 #include <vector>
 
 uint16_t BezierCurve::s_count = 0;
 
-BezierCurve::BezierCurve(const std::vector<std::shared_ptr<Point>> &points)
-    : Object(ShaderType::CURVE), m_points(points.begin(), points.end()) {
-  glGenVertexArrays(1, &m_vao);
-  glGenBuffers(1, &m_vbo);
-  glGenBuffers(1, &m_ebo);
+BezierCurve::BezierCurve(const std::vector<std::weak_ptr<Object>> &points)
+    : Curve(points) {
   name = "BezierCurve " + std::to_string(s_count++);
   glBindVertexArray(m_vao);
   glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
@@ -25,11 +20,10 @@ BezierCurve::BezierCurve(const std::vector<std::shared_ptr<Point>> &points)
   setEdges();
 }
 
-void BezierCurve::setVertices() const {
+void BezierCurve::setVertices() {
   std::vector<float> points;
-  points.reserve(m_points.size() * 3);
   for (uint16_t i = 0; i < m_points.size(); i++) {
-    if (std::shared_ptr<Point> sp = m_points[i].lock()) {
+    if (std::shared_ptr<Object> sp = m_points[i].lock()) {
       const math137::Vector3f &pos = sp->getTranslation();
       points.push_back(pos.x());
       points.push_back(pos.y());
@@ -41,7 +35,6 @@ void BezierCurve::setVertices() const {
     return;
   }
 
-  glBindVertexArray(m_vao);
   glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ebo);
   glBufferData(GL_ARRAY_BUFFER, points.size() * sizeof(float), points.data(),
@@ -49,6 +42,8 @@ void BezierCurve::setVertices() const {
 }
 
 void BezierCurve::setEdges() const {
+  if (m_points.size() < 2)
+    return;
   std::vector<uint16_t> indices;
   if (m_type == ShaderType::CURVE) {
     indices.reserve((m_points.size() - 1) * 2);
@@ -59,11 +54,9 @@ void BezierCurve::setEdges() const {
     }
   }
   if (m_type == ShaderType::OBJECT) {
+    indices.resize(m_points.size());
+    std::iota(indices.begin(), indices.end(), 0);
     indices.reserve((m_points.size() - 1) * 2);
-    for (uint16_t i = 1; i < m_points.size(); i++) {
-      indices.push_back(i - 1);
-      indices.push_back(i);
-    }
   }
 
   glBindVertexArray(m_vao);
@@ -84,7 +77,7 @@ void BezierCurve::render(std::shared_ptr<Renderer> &renderer,
   renderer->setModel(getModel());
   renderer->setColor(color);
   if (m_type == ShaderType::OBJECT) {
-    glDrawElements(GL_LINES, (m_points.size() - 1) * 2, GL_UNSIGNED_SHORT, 0);
+    glDrawArrays(GL_LINE_STRIP, 0, m_points.size());
   }
   if (m_type == ShaderType::CURVE) {
     uint16_t sizeFull = (m_points.size() - 1) / 3;
@@ -101,36 +94,14 @@ void BezierCurve::render(std::shared_ptr<Renderer> &renderer,
   }
 }
 
-void BezierCurve::addPoint(std::shared_ptr<Point> p) {
-  m_points.push_back(p);
+void BezierCurve::notify() {
   setVertices();
   setEdges();
 }
 
-void BezierCurve::removePoint(const std::shared_ptr<Point> &p) {
-  for (int i = 0; i < m_points.size(); i++) {
-    if (m_points[i].lock() == p) {
-      m_points[i] = m_points.back();
-      m_points.pop_back();
-    }
-  }
-  setVertices();
-  setEdges();
-}
-
-void BezierCurve::notify() { setVertices(); }
-
-bool BezierCurve::containsPoint(const std::shared_ptr<Object> &p) const {
-  for (const auto &p2 : m_points) {
-    if (*p2.lock().get() == *p.get())
-      return true;
-  }
-  return false;
-}
-
-void BezierCurve::renderObjectMenu() {
+bool BezierCurve::renderObjectMenu() {
   if (!m_openMenu)
-    return;
+    return false;
   static const char *modes[] = {"Curve", "Line"};
 
   static int idx = 0;
@@ -147,7 +118,7 @@ void BezierCurve::renderObjectMenu() {
   ImGui::Text("Points");
   int deleteIndex = -1;
   for (int i = 0; i < m_points.size(); i++) {
-    std::shared_ptr<Point> point = m_points[i].lock();
+    std::shared_ptr<Object> point = m_points[i].lock();
     if (!point)
       continue;
     ImGui::PushID(i);
@@ -181,5 +152,6 @@ void BezierCurve::renderObjectMenu() {
   ImGui::End();
   if (deleteIndex != -1)
     m_points.erase(m_points.begin() + deleteIndex);
+  return false;
 }
 void BezierCurve::recalculateModel() { m_update = false; }

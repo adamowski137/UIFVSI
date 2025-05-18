@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Object.hpp"
+#include "../Object.hpp"
 #include "Vector.hpp"
 #include <cstdint>
 #include <memory>
@@ -11,7 +11,7 @@ public:
   Point();
   ~Point() {}
 
-  void renderObjectMenu() override;
+  bool renderObjectMenu() override;
   void render(std::shared_ptr<Renderer> &renderer,
               const math137::Vector4f &color) override;
 

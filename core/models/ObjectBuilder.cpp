@@ -1,8 +1,13 @@
 #include "ObjectBuilder.hpp"
-#include "BezierCurve.hpp"
-#include "Point.hpp"
-#include "Torus.hpp"
+#include "Object.hpp"
 #include "Vector.hpp"
+#include "curves/BSpline.hpp"
+#include "curves/BezierCurve.hpp"
+#include "curves/IBSpline.hpp"
+#include "primitives/Point.hpp"
+#include "primitives/Torus.hpp"
+#include "surfaces/BezierC0.hpp"
+#include <cmath>
 #include <memory>
 #include <vector>
 
@@ -16,9 +21,21 @@ ObjectBuilder &ObjectBuilder::withNewPoint() {
   return *this;
 }
 
-ObjectBuilder &
-ObjectBuilder::withNewBezierCurve(std::vector<std::shared_ptr<Point>> points) {
+ObjectBuilder &ObjectBuilder::withNewBezierCurve(
+    const std::vector<std::weak_ptr<Object>> &points) {
   m_object = std::make_shared<BezierCurve>(points);
+  return *this;
+}
+
+ObjectBuilder &ObjectBuilder::withNewBSpline(
+    const std::vector<std::weak_ptr<Object>> &points) {
+  m_object = std::make_shared<BSpline>(points);
+  return *this;
+}
+
+ObjectBuilder &ObjectBuilder::withNewIBSpline(
+    const std::vector<std::weak_ptr<Object>> &points) {
+  m_object = std::make_shared<IBSpline>(points);
   return *this;
 }
 

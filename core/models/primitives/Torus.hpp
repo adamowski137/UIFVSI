@@ -1,10 +1,11 @@
 #pragma once
 
-#include "Object.hpp"
+#include "../Object.hpp"
 #include "Vector.hpp"
 #include <cstdint>
 #include <memory>
 #include <vector>
+
 class Torus : public Object {
 public:
   Torus(float r, float R);
@@ -12,7 +13,7 @@ public:
   inline float getSmallR() { return m_r; }
   inline float getBigR() { return m_R; }
 
-  virtual void renderObjectMenu() override;
+  virtual bool renderObjectMenu() override;
   virtual void render(std::shared_ptr<Renderer> &renderer,
                       const math137::Vector4f &color) override;
   void setRadius(float r, float R);

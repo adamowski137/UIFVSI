@@ -41,6 +41,7 @@ private:
   std::unique_ptr<GLFWwindow, GLFWwindowDeleter> m_window;
   std::shared_ptr<Renderer> m_renderer;
   std::unique_ptr<Scene> m_scene;
+  std::unique_ptr<SceneManager> m_manager;
 
   Camera m_camera;
   State m_state;

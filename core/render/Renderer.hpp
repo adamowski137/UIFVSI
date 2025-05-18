@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Matrix.hpp"
 #include "Shader.hpp"
 #include "Vector.hpp"
+#include <cstdint>
 
 class Object;
 
@@ -15,11 +15,13 @@ public:
   void setShader(const ShaderType type);
   void setColor(const math137::Vector4f &color);
   void setDegree(uint8_t degree);
+  void setUVSubdivisions(uint16_t u, uint16_t v);
 
 private:
   Shader *m_selectedShader;
   Shader m_objectShader;
   Shader m_pointShader;
   Shader m_curveShader;
+  Shader m_surfaceShader;
   ShaderType m_type;
 };

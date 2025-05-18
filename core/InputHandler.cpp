@@ -1,10 +1,12 @@
 #include "InputHandler.hpp"
 #include "Quaternion.hpp"
+#include "SceneManager.hpp"
 #include "State.hpp"
 #include "Transformations.hpp"
 #include "Vector.hpp"
 #include <GLFW/glfw3.h>
 #include <cstdint>
+#include <iostream>
 #include <set>
 
 void InputHandler::registerMouseClick(int key, int action, float x, float y) {
@@ -53,8 +55,8 @@ float InputHandler::project(float x, float y) {
   return r * r / (2 * sqrtf(d));
 }
 
-void InputHandler::handleEvents(const std::unique_ptr<Scene> &scene,
-                                State &state, Camera &camera) {
+void InputHandler::handleEvents(const std::unique_ptr<SceneManager> &manager,
+                                State &state, Camera &camera, float dt) {
   while (!m_eventQueue.empty()) {
     InputEvent event = m_eventQueue.front();
     m_eventQueue.pop();
@@ -69,7 +71,7 @@ void InputHandler::handleEvents(const std::unique_ptr<Scene> &scene,
       switch (state.getMode()) {
       case Mode::MOVE: {
         Transformations::MoveSelected(
-            scene, positonChange.x() / state.getWidth(),
+            manager, positonChange.x() / state.getWidth(),
             m_keyboard[GLFW_KEY_LEFT_CONTROL]
                 ? 0
                 : positonChange.y() / state.getHeight(),
@@ -86,13 +88,13 @@ void InputHandler::handleEvents(const std::unique_ptr<Scene> &scene,
         float psz = project(ndcsx, ndcsy);
         float pez = project(ndcex, ndcey);
         Transformations::RotateSelected(
-            scene, state,
+            manager, state,
             math137::Quaternion::FromVectors({ndcsx, ndcsy, psz},
                                              {ndcex, ndcey, pez}));
         break;
       }
       case Mode::SCALE: {
-        Transformations::ScaleSelected(scene, state,
+        Transformations::ScaleSelected(manager, state,
                                        positonChange.y() / state.getHeight());
         break;
       }
@@ -136,6 +138,25 @@ void InputHandler::handleEvents(const std::unique_ptr<Scene> &scene,
       if (action == GLFW_RELEASE && key == GLFW_KEY_X) {
         state.setTransformation(Transformation::MASS);
       }
+      if (action == GLFW_PRESS && key == GLFW_KEY_UP) {
+        camera.moveTarget({10 * dt, 0.f, 0.f});
+      }
+      if (action == GLFW_PRESS && key == GLFW_KEY_DOWN) {
+        camera.moveTarget({-10 * dt, 0.f, 0.f});
+      }
+      if (action == GLFW_PRESS && key == GLFW_KEY_RIGHT) {
+        camera.moveTarget({0.f, 0.f, 10 * dt});
+      }
+      if (action == GLFW_PRESS && key == GLFW_KEY_LEFT) {
+        camera.moveTarget({0.f, 0.f, -10 * dt});
+      }
+      if (action == GLFW_PRESS && key == GLFW_KEY_COMMA) {
+        camera.moveTarget({0.f, 10 * dt, 0.f});
+      }
+      if (action == GLFW_PRESS && key == GLFW_KEY_PERIOD) {
+        camera.moveTarget({0.f, -10 * dt, 0.f});
+      }
+
       break;
     }
     case EventType::MOUSE_CLICK: {
@@ -146,14 +167,16 @@ void InputHandler::handleEvents(const std::unique_ptr<Scene> &scene,
       if (action == GLFW_RELEASE && key == GLFW_MOUSE_BUTTON_RIGHT) {
         float ndcsx = (2 * end.x()) / (state.getWidth() - 1) - 1.f;
         float ndcsy = 1.f - (2 * end.y()) / (state.getHeight() - 1);
-        Transformations::SetCursor(scene, camera, ndcsx, ndcsy);
+        Transformations::SetCursor(manager, camera, ndcsx, ndcsy);
       }
       if (action == GLFW_RELEASE && key == GLFW_MOUSE_BUTTON_LEFT &&
           state.getMode() == Mode::DEFAULT) {
         uint16_t startX = fminf(end.x(), start.x());
-        uint16_t startY = fminf(end.y(), start.y());
+        uint16_t startY =
+            fminf(state.getHeight() - end.y(), state.getHeight() - start.y());
         uint16_t endX = fmaxf(end.x(), start.x());
-        uint16_t endY = fmaxf(end.y(), start.y());
+        uint16_t endY =
+            fmaxf(state.getHeight() - end.y(), state.getHeight() - start.y());
         int size = 10;
         uint16_t height = fmax(endY - startY, size);
         uint16_t width = fmax(endX - startX, size);
@@ -162,8 +185,8 @@ void InputHandler::handleEvents(const std::unique_ptr<Scene> &scene,
                      state.stencilData.data());
         std::set<uint8_t> data(state.stencilData.begin(),
                                state.stencilData.begin() + height * width);
-        scene->selectObjects(data, m_keyboard[GLFW_KEY_LEFT_CONTROL]);
-        scene->recalculateMassCenter();
+        manager->selectObjects(data, m_keyboard[GLFW_KEY_LEFT_CONTROL]);
+        manager->recalculateMassCenter();
       }
       break;
     }

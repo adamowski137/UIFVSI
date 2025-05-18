@@ -1,7 +1,6 @@
 #include "Object.hpp"
 #include "MatrixUtils.hpp"
 #include "Quaternion.hpp"
-#include "Vector.hpp"
 #include "imgui.h"
 #include <GL/glew.h>
 #include <cstdint>
@@ -14,14 +13,14 @@ Object::Object(ShaderType type)
       m_scale(math137::Vector3f(1.f, 1.f, 1.f)),
       m_translation(math137::Vector3f(0.f, 0.f, 0.f)),
       m_model(math137::MatrixUtils::Identity()), m_update(false), m_type(type),
-      m_id(s_itemCount++) {
+      m_id(s_itemCount++), m_openMenu(false) {
   glGenVertexArrays(1, &m_vao);
   glGenBuffers(1, &m_vbo);
   glGenBuffers(1, &m_ebo);
 }
 
 Object::~Object() {
-  glDeleteBuffers(1, &m_vao);
+  glDeleteVertexArrays(1, &m_vao);
   glDeleteBuffers(1, &m_vbo);
   glDeleteBuffers(1, &m_ebo);
 }
@@ -41,8 +40,9 @@ void Object::recalculateModel() {
   m_update = false;
 }
 
-void Object::setNameMenu() {
+bool Object::setNameMenu() {
   char buffer[256];
+  bool change = false;
   strcpy(buffer, name.c_str());
   if (ImGui::InputText(("###ObjectNameMenu" + std::to_string(m_id)).c_str(),
                        buffer, sizeof(buffer),
@@ -52,7 +52,10 @@ void Object::setNameMenu() {
   float data[3] = {m_translation.x(), m_translation.y(), m_translation.z()};
   if (ImGui::InputFloat3(("###Position" + name).c_str(), data)) {
     setTranslation({data[0], data[1], data[2]});
+    change = true;
   }
+
+  return change;
 }
 void Object::rotate(const math137::Quaternion &rot,
                     const math137::Vector3f &pivot) {

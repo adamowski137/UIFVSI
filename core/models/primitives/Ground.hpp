@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Object.hpp"
+#include "../Object.hpp"
 #include "Vector.hpp"
 #include <cstdint>
 #include <iostream>
@@ -10,7 +10,7 @@ public:
   Ground();
   void render(std::shared_ptr<Renderer> &renderer,
               const math137::Vector4f &color) override;
-  void renderObjectMenu() override {}
+  bool renderObjectMenu() override { return false; }
 
 protected:
   void recalculateModel() override {

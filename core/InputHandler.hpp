@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Camera.hpp"
-#include "Scene.hpp"
+#include "SceneManager.hpp"
 #include "State.hpp"
 #include "Vector.hpp"
 #include <array>
@@ -49,8 +49,8 @@ public:
   void registerKeyPress(int key, int action);
   void registerMouseScroll(float dx);
 
-  void handleEvents(const std::unique_ptr<Scene> &scene, State &state,
-                    Camera &camera);
+  void handleEvents(const std::unique_ptr<SceneManager> &manager, State &state,
+                    Camera &camera, float dt);
 
 private:
   float project(float x, float y);

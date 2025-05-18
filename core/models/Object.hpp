@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <vector>
 
 class Object {
 public:
@@ -41,12 +42,16 @@ public:
   inline void setMenu(bool open) { m_openMenu = open; }
   void rotate(const math137::Quaternion &rot, const math137::Vector3f &pivot);
   void scale(float s, const math137::Vector3f &pivot);
-  void setNameMenu();
+  bool setNameMenu();
 
-  virtual void renderObjectMenu() = 0;
+  virtual bool renderObjectMenu() = 0;
   virtual void render(std::shared_ptr<Renderer> &renderer,
                       const math137::Vector4f &color) = 0;
   virtual void notify() {}
+  virtual std::vector<std::weak_ptr<Object>> getVirtualObjects() const {
+    return {};
+  }
+  virtual void notifyVirtual(uint16_t index, const math137::Vector3f &pos) {}
 
   std::string name;
 

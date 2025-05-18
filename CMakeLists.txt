@@ -12,13 +12,20 @@ add_executable(${PROJECT_NAME}
   core/Transformations.cpp
   core/render/Shader.cpp
   core/render/Renderer.cpp
-  core/models/Torus.cpp
-  core/models/Object.cpp
-  core/models/Point.cpp
-  core/models/BezierCurve.cpp
-  core/models/Cursor.cpp
-  core/models/Ground.cpp
+  core/models/primitives/Torus.cpp
+  core/models/primitives/Point.cpp
+  core/models/primitives/Cursor.cpp
+  core/models/primitives/Ground.cpp
+  core/models/curves/BSpline.cpp
+  core/models/curves/BezierCurve.cpp
+  core/models/curves/IBSpline.cpp
+  core/models/curves/Curve.cpp
   core/models/ObjectBuilder.cpp
+  core/models/Object.cpp
+  core/models/surfaces/BezierC0.cpp
+  core/models/surfaces/BezierC2.cpp
+  core/models/surfaces/Surface.cpp
+  core/models/surfaces/SurfaceBuilder.cpp
 )
 
 set(CMAKE_BUILD_TYPE Debug)

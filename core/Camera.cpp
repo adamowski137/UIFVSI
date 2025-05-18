@@ -3,7 +3,6 @@
 #include "MatrixUtils.hpp"
 #include "Vector.hpp"
 #include <cmath>
-#include <iostream>
 
 Camera::Camera(float distance, math137::Vector3f target)
     : m_distance(distance), m_target(target),
@@ -51,10 +50,5 @@ void Camera::rotateCamera(float dx, float dy) {
     m_pitch = M_PI_2 - 0.01f;
   if (m_pitch <= -M_PI_2)
     m_pitch = -M_PI_2 + 0.01f;
-  recalculateView();
-}
-
-void Camera::moveCamera(float dx) {
-  m_distance += dx;
   recalculateView();
 }

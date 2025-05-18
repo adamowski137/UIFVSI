@@ -1,5 +1,5 @@
 #include "Ground.hpp"
-#include "Object.hpp"
+#include "../Object.hpp"
 #include "Vector.hpp"
 #include <GL/glew.h>
 #include <memory>
