@@ -1,14 +1,17 @@
 #pragma once
 
+#include "Matrix.hpp"
 #include "Vector.hpp"
 #include "models/Object.hpp"
 #include "models/primitives/Cursor.hpp"
 #include "models/primitives/Point.hpp"
+#include "models/surfaces/BezierC0.hpp"
 #include "models/surfaces/SurfaceBuilder.hpp"
 #include <cstdint>
 #include <map>
 #include <memory>
 #include <set>
+#include <tuple>
 #include <vector>
 
 struct ObjectPtrCompare {
@@ -32,9 +35,10 @@ class SceneManager {
 public:
   SceneManager()
       : m_observers(), m_parentObjects(), m_virtualObjects(), m_notifyQueue() {}
+  void clear();
   void notify(const std::weak_ptr<Object> &obj);
-  void addObject(const std::shared_ptr<Object> &obj);
-  void deleteObject(const std::weak_ptr<Object> &obj);
+  void addObject(std::shared_ptr<Object> obj);
+  void deleteObject(const std::weak_ptr<Object> &obj, bool force = false);
   void addObserver(const std::weak_ptr<Object> &obj,
                    const std::weak_ptr<Object> &observer);
   void deleteObserver(const std::weak_ptr<Object> &obj,
@@ -44,6 +48,7 @@ public:
   void addBspline();
   void addIBspline();
   void addPoint();
+  void collapseSelected();
 
   void addVirtualObjects(const std::weak_ptr<Object> &parent);
   void deleteVirtualObjects(const std::weak_ptr<Object> &parent);
@@ -52,9 +57,15 @@ public:
   void update();
   void recalculateMassCenter();
   void toggleSelection(const std::weak_ptr<Object> &obj);
+  void notifyQueue();
+  void addGregoryPatch();
+
   bool isSelected(const std::weak_ptr<Object> &obj) const;
   bool isVirtual(const std::weak_ptr<Object> &obj) const;
-  void notifyQueue();
+  std::tuple<std::shared_ptr<Object>, std::shared_ptr<Object>,
+             std::shared_ptr<Object>, std::shared_ptr<BezierC0>,
+             std::shared_ptr<BezierC0>, std::shared_ptr<BezierC0>>
+  containsCycle() const;
 
   std::vector<std::weak_ptr<Object>> getDrawableObjects() const;
 
@@ -97,6 +108,10 @@ public:
   Cursor m_cursor;
 
 private:
+  std::shared_ptr<BezierC0>
+  findCommonElement(const std::set<std::shared_ptr<BezierC0>> &s1,
+                    const std::set<std::shared_ptr<BezierC0>> &s2) const;
+
   // TODO: figure where to put this
   math137::Matrix4f m_invprojection;
   // objects

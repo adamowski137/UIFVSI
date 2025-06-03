@@ -3,7 +3,6 @@
 #include "../Object.hpp"
 #include "Vector.hpp"
 #include <cstdint>
-#include <iostream>
 #include <memory>
 class Ground : public Object {
 public:
@@ -13,10 +12,7 @@ public:
   bool renderObjectMenu() override { return false; }
 
 protected:
-  void recalculateModel() override {
-    std::cout << m_model << std::endl;
-    m_update = false;
-  }
+  void recalculateModel() override { m_update = false; }
 
 private:
   const float m_gridSize = 10.f;

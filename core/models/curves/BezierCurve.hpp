@@ -15,6 +15,7 @@ public:
   void notify() override;
 
 private:
+  std::string getTypeName() const override { return "bezierC0"; }
   void recalculateModel() override;
   void setVertices() override;
   void setEdges() const override;

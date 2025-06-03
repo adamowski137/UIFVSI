@@ -3,6 +3,7 @@
 #include "Object.hpp"
 #include "Quaternion.hpp"
 #include "Vector.hpp"
+#include <cstdint>
 #include <memory>
 #include <vector>
 class ObjectBuilder {
@@ -18,6 +19,7 @@ public:
   ObjectBuilder &withPosition(const math137::Vector3f &pos);
   ObjectBuilder &withRotation(const math137::Quaternion &rot);
   ObjectBuilder &withScale(const math137::Vector3f &scale);
+  ObjectBuilder &withId(const uint16_t val);
   std::shared_ptr<Object> build();
 
 private:

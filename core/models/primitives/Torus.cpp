@@ -112,12 +112,12 @@ bool Torus::renderObjectMenu() {
   ImGui::Separator();
   ImGui::Text("Torus r:");
   if (ImGui::SliderFloat(("##torus r" + std::to_string(m_id)).c_str(), &m_r,
-                         0.1, 0.5)) {
+                         0.1, 5)) {
     setVertexData();
   }
   ImGui::Text("Torus R:");
   if (ImGui::SliderFloat(("##torus R" + std::to_string(m_id)).c_str(), &m_R,
-                         0.1, 0.5)) {
+                         0.1, 5)) {
     setVertexData();
   }
   ImGui::End();

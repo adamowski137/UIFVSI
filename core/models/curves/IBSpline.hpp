@@ -14,6 +14,7 @@ private:
   void recalculateModel() override;
   void setVertices() override;
   void setEdges() const override;
+  std::string getTypeName() const override { return "interpolatedC2"; }
 
   static uint16_t s_count;
 };

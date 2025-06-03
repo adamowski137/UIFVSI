@@ -21,3 +21,11 @@ bool Curve::containsPoint(const std::weak_ptr<Object> &p) const {
   }
   return false;
 }
+
+void Curve::replacePoint(const std::weak_ptr<Object> &current,
+                         const std::shared_ptr<Object> &newPoint) {
+  for (uint16_t i = 0; i < m_points.size(); i++) {
+    if (m_points[i].lock() == current.lock())
+      m_points[i] = newPoint;
+  }
+}

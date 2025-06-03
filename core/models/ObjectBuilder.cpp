@@ -1,5 +1,6 @@
 #include "ObjectBuilder.hpp"
 #include "Object.hpp"
+#include "Quaternion.hpp"
 #include "Vector.hpp"
 #include "curves/BSpline.hpp"
 #include "curves/BezierCurve.hpp"
@@ -44,8 +45,20 @@ ObjectBuilder &ObjectBuilder::withPosition(const math137::Vector3f &pos) {
   return *this;
 }
 
+ObjectBuilder &ObjectBuilder::withRotation(const math137::Quaternion &rot) {
+  m_object->setRotation(rot);
+  return *this;
+}
+
 ObjectBuilder &ObjectBuilder::withScale(const math137::Vector3f &scale) {
   m_object->setScale(scale);
+  return *this;
+}
+
+ObjectBuilder &ObjectBuilder::withId(const uint16_t val) {
+  m_object->m_id = val;
+  if (Object::s_itemCount < val)
+    Object::s_itemCount = val;
   return *this;
 }
 

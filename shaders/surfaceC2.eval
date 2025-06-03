@@ -1,0 +1,49 @@
+#version 460 core
+
+layout (isolines, fractional_even_spacing, ccw) in;
+
+uniform mat4 view;
+uniform mat4 projection;
+
+uniform uint u_subdivisions;
+uniform uint v_subdivisions;
+
+vec3 p(uint up, uint vp) {
+    return gl_in[up * 4 + vp].gl_Position.xyz;
+}
+float N0(float t) {
+    return (1.0 - t) * (1.0 - t) * (1.0 - t) / 6.0;
+}
+
+float N1(float t) {
+    return (3.0 * t * t * t - 6.0 * t * t + 4.0) / 6.0;
+}
+
+float N2(float t) {
+    return (-3.0 * t * t * t + 3.0 * t * t + 3.0 * t + 1.0) / 6.0;
+}
+
+float N3(float t) {
+    return t * t * t / 6.0;
+}
+
+void main() {
+    float u = gl_TessCoord.x;
+    float v = (gl_TessCoord.y / (u_subdivisions - 1) * (u_subdivisions));
+
+    vec4 N_u = vec4(N0(u), N1(u), N2(u), N3(u));
+    vec4 N_v = vec4(N0(v), N1(v), N2(v), N3(v));
+
+    mat4 N_uv = outerProduct(N_u, N_v);
+
+    vec3 position = vec3(0.f, 0.f, 0.f);
+    for (int i = 0; i < 4; i++)
+    {
+        for (int j = 0; j < 4; j++)
+        {
+            position += gl_in[i * 4 + j].gl_Position.xyz * N_uv[i][j];
+        }
+    }
+
+    gl_Position = projection * view * vec4(position, 1.0);
+}

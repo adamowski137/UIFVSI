@@ -1,6 +1,6 @@
 #version 460 core
 
-layout (quads, equal_spacing, ccw) in;
+layout (isolines, fractional_even_spacing, ccw) in;
 
 uniform mat4 model;
 uniform mat4 view;
@@ -38,7 +38,7 @@ vec3 bezierSurf(float u, float v){
 
 void main(){
   float u = gl_TessCoord.x;
-  float v = gl_TessCoord.y;
+  float v = (gl_TessCoord.y / (u_subdivisions - 1) * (u_subdivisions));
 
   vec3 pos = bezierSurf(u, v);
   gl_Position = projection * view * model * vec4(pos, 1.0f);

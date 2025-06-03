@@ -6,10 +6,10 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
-#include <GL/gl.h>
 #include <cmath>
 #include <cstdint>
 #include <cstring>
+#include <iostream>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -177,9 +177,11 @@ Window::Window(uint16_t width, uint16_t height, std::string title)
   m_scene = std::make_unique<Scene>();
   m_manager = std::make_unique<SceneManager>();
   m_renderer->setProjection(math137::MatrixUtils::Projection(
-      m_fov, (float)width / (float)height, 0.1f, 100.f));
+      m_state.m_fov, (float)width / (float)height, m_state.m_near,
+      m_state.m_far));
   m_manager->setInvProjection(math137::MatrixUtils::InvProjection(
-      m_fov, (float)width / (float)height, 0.1f, 100.f));
+      m_state.m_fov, (float)width / (float)height, m_state.m_near,
+      m_state.m_far));
 }
 
 Window::~Window() {
@@ -197,7 +199,7 @@ void Window::update(bool &running) {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
   m_renderer->setView(m_camera.getView());
   m_manager->notifyQueue();
-  m_scene->render(m_renderer, m_manager);
+  m_scene->render(m_renderer, m_manager, m_state);
 
   float t = glfwGetTime();
   renderImgui(t - m_t);
@@ -212,7 +214,7 @@ void Window::renderImgui(float dt) {
   ImGui_ImplOpenGL3_NewFrame();
   ImGui_ImplGlfw_NewFrame();
   ImGui::NewFrame();
-  m_scene->renderMenu(m_manager);
+  m_scene->renderMenu(m_manager, m_state);
   ImGui::Text("%d frames", (int)(1 / dt));
   ImGui::Render();
   ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -247,15 +249,18 @@ void Window::scrollInputCallback(GLFWwindow *window, double xOffset,
                                  double yOffset) {
 
   Window *w = reinterpret_cast<Window *>(glfwGetWindowUserPointer(window));
-  w->m_camera.changeDistance(yOffset);
+  w->m_camera.changeDistance(0.01f * yOffset);
 }
 void Window::resizeWindowCallback(GLFWwindow *window, int width, int height) {
 
   Window *w = reinterpret_cast<Window *>(glfwGetWindowUserPointer(window));
   w->m_state.setDimensions(width, height);
   glViewport(0, 0, width, height);
-  w->m_renderer->setProjection(math137::MatrixUtils::Projection(
-      w->m_fov, (float)width / height, 0.1f, 100.f));
+  w->m_state.setProjection(
+      math137::MatrixUtils::Projection(w->m_state.m_fov, (float)width / height,
+                                       w->m_state.m_near, w->m_state.m_far));
+  w->m_renderer->setProjection(w->m_state.getProjection());
   w->m_manager->setInvProjection(math137::MatrixUtils::InvProjection(
-      w->m_fov, (float)width / height, 0.1f, 100.f));
+      w->m_state.m_fov, (float)width / height, w->m_state.m_near,
+      w->m_state.m_far));
 }

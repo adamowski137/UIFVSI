@@ -22,6 +22,7 @@ private:
   void recalculateModel() override;
   void setVertices() override;
   void setEdges() const override;
+  std::string getTypeName() const override { return "bezierC2"; }
 
   std::vector<std::shared_ptr<Object>> m_bernsteinPoints;
 

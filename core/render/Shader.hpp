@@ -6,7 +6,7 @@
 #include <cstdint>
 #include <string>
 
-enum class ShaderType { OBJECT, POINT, CURVE, SURFACE };
+enum class ShaderType { OBJECT, POINT, CURVE, SURFACE, SURFACEC2 };
 
 class Shader {
 public:

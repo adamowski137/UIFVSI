@@ -3,6 +3,7 @@
 #include "../render/Renderer.hpp"
 #include "../render/Shader.hpp"
 #include "Matrix.hpp"
+#include "ObjectBuilder.hpp"
 #include "Quaternion.hpp"
 #include "Vector.hpp"
 #include <cstdint>
@@ -52,10 +53,15 @@ public:
     return {};
   }
   virtual void notifyVirtual(uint16_t index, const math137::Vector3f &pos) {}
+  virtual void replacePoint(const std::weak_ptr<Object> &current,
+                            const std::shared_ptr<Object> &newPoint) {}
 
   std::string name;
 
   bool operator==(const Object &o) { return m_id == o.m_id; }
+
+  friend class Serializer;
+  friend class ObjectBuilder;
 
 protected:
   virtual void recalculateModel();

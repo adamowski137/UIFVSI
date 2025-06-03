@@ -13,8 +13,9 @@ public:
               const math137::Vector4f &color) override;
 
 private:
+  std::string getTypeName() const override { return "bezierSurfaceC2"; }
   void setVertices() override;
+  void setEdges() override;
   void recalculateModel() override { m_update = false; }
   static uint16_t s_count;
-  std::vector<std::vector<math137::Vector3f>> m_bezierPoints;
 };

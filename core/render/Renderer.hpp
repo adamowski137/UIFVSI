@@ -23,5 +23,6 @@ private:
   Shader m_pointShader;
   Shader m_curveShader;
   Shader m_surfaceShader;
+  Shader m_surfaceC2Shader;
   ShaderType m_type;
 };

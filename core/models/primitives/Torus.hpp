@@ -8,7 +8,7 @@
 
 class Torus : public Object {
 public:
-  Torus(float r, float R);
+  Torus(float R, float r);
   ~Torus();
   inline float getSmallR() { return m_r; }
   inline float getBigR() { return m_R; }
@@ -26,6 +26,7 @@ public:
   static uint16_t s_count;
 
 private:
+  friend class Serializer;
   void setVertexData();
   float m_r;
   float m_R;

@@ -48,6 +48,4 @@ private:
   InputHandler m_inputHandler;
 
   float m_t;
-
-  const float m_fov = (M_PI_4);
 };

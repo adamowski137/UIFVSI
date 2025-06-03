@@ -1,6 +1,7 @@
 #pragma once
 
 #include "SceneManager.hpp"
+#include "State.hpp"
 #include "Vector.hpp"
 #include "imgui.h"
 #include "models/primitives/Ground.hpp"
@@ -15,8 +16,8 @@ public:
   Scene();
 
   void render(std::shared_ptr<Renderer> &renderer,
-              std::unique_ptr<SceneManager> &manager);
-  void renderMenu(std::unique_ptr<SceneManager> &manager);
+              std::unique_ptr<SceneManager> &manager, const State &state);
+  void renderMenu(std::unique_ptr<SceneManager> &manager, State &state);
 
 private:
   Ground m_ground;
@@ -25,6 +26,8 @@ private:
   const math137::Vector4f m_selectedColor =
       math137::Vector4f(1.f, 0.2f, 0.2f, 1.f);
   const math137::Vector4f m_centerColor = math137::Vector4f(1.f, 1.f, 1.f, 1.f);
+  const math137::Vector4f m_leftColor = math137::Vector4f(1.f, 0.f, 0.f, 1.f);
+  const math137::Vector4f m_rightColor = math137::Vector4f(0.f, 1.f, 1.f, 1.f);
   template <typename T>
   void getSurfaceMenu(bool &open,
                       const std::unique_ptr<SceneManager> &manager) {

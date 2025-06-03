@@ -1,4 +1,6 @@
 cmake_minimum_required(VERSION 3.30)
+set(set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON))
 
 project(uifvsi)
 add_executable(${PROJECT_NAME} 
@@ -26,6 +28,8 @@ add_executable(${PROJECT_NAME}
   core/models/surfaces/BezierC2.cpp
   core/models/surfaces/Surface.cpp
   core/models/surfaces/SurfaceBuilder.cpp
+  core/serialize/Serializer.cpp
+  core/models/surfaces/Gregory.cpp
 )
 
 set(CMAKE_BUILD_TYPE Debug)
@@ -37,6 +41,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE INTERNAL "")
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/math137)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/glew-cmake)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/glfw)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/ImGuiFileDialog)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/json)
 
 find_package(OpenGL REQUIRED)
 
@@ -50,8 +56,19 @@ add_library(imgui STATIC
     external/imgui/backends/imgui_impl_opengl3.cpp
 )
 
-
-target_include_directories(imgui PUBLIC external/imgui external/imgui/backends)
+target_include_directories(imgui PUBLIC 
+  external/imgui 
+  external/imgui/backends
+)
 target_include_directories(math137 PUBLIC external/math137/include)
 target_link_libraries(imgui PRIVATE glfw OpenGL::GL)
-target_link_libraries(${PROJECT_NAME} imgui math137 libglew_static OpenGL::GL glfw)
+target_link_libraries(ImGuiFileDialog PRIVATE imgui)
+target_link_libraries(${PROJECT_NAME} PUBLIC 
+  imgui 
+  math137 
+  libglew_static 
+  OpenGL::GL 
+  glfw 
+  ImGuiFileDialog 
+  nlohmann_json::nlohmann_json
+)

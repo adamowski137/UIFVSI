@@ -6,8 +6,9 @@
 #include <vector>
 
 Surface::Surface(const std::vector<std::shared_ptr<Object>> &points,
-                 uint16_t uPatches, uint16_t vPatches, bool cylinder)
-    : Object(ShaderType::SURFACE), m_uPatches{uPatches}, m_vPatches(vPatches),
+                 uint16_t uPatches, uint16_t vPatches, bool cylinder,
+                 ShaderType type)
+    : Object(type), m_uPatches{uPatches}, m_vPatches(vPatches),
       m_cylinder(cylinder) {
   uint16_t uPoints = 4 + (uPatches - 1) * 3 - (cylinder ? 1 : 0);
   uint16_t vPoints = 4 + (vPatches - 1) * 3;
@@ -21,49 +22,6 @@ Surface::Surface(const std::vector<std::shared_ptr<Object>> &points,
       m_points[u][v] = points[u * vPoints + v];
     }
   }
-
-  setEdges();
-}
-
-void Surface::setEdges() {
-  uint16_t uPoints = (4 + (m_uPatches - 1) * 3) - (m_cylinder ? 1 : 0);
-  uint16_t vPoints = (4 + (m_vPatches - 1) * 3);
-  if (m_type == ShaderType::OBJECT) {
-    for (uint16_t u = 0; u < uPoints; u++) {
-      for (uint16_t v = 0; v < vPoints; v++) {
-        if (v != 0) {
-          m_edges.push_back(u * vPoints + v - 1);
-          m_edges.push_back(u * vPoints + v);
-        }
-        if (u != 0) {
-          m_edges.push_back((u - 1) * vPoints + v);
-          m_edges.push_back(u * vPoints + v);
-        }
-      }
-    }
-
-    if (m_cylinder) {
-      for (uint16_t v = 0; v < vPoints; v++) {
-        m_edges.push_back((uPoints - 1) * vPoints + v);
-        m_edges.push_back(v);
-      }
-    }
-  }
-  if (m_type == ShaderType::SURFACE) {
-    m_edges.clear();
-    for (uint16_t u = 0; u < m_uPatches; u++) {
-      for (uint16_t v = 0; v < m_vPatches; v++) {
-        for (uint16_t du = 0; du < 4; du++) {
-          for (uint16_t dv = 0; dv < 4; dv++) {
-            m_edges.push_back(((u * 3 + du) % uPoints) * vPoints + v * 3 + dv);
-          }
-        }
-      }
-    }
-  }
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ebo);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, m_edges.size() * sizeof(uint16_t),
-               m_edges.data(), GL_STATIC_DRAW);
 }
 
 bool Surface::renderObjectMenu() {
@@ -85,4 +43,14 @@ bool Surface::renderObjectMenu() {
   ImGui::SliderInt("V subdivisions", &m_divisionsV, 1, 10);
   ImGui::End();
   return false;
+}
+
+void Surface::replacePoint(const std::weak_ptr<Object> &current,
+                           const std::shared_ptr<Object> &newPoint) {
+  for (uint16_t i = 0; i < m_points.size(); i++) {
+    for (uint16_t j = 0; j < m_points[i].size(); j++) {
+      if (m_points[i][j].lock() == current.lock())
+        m_points[i][j] = newPoint;
+    }
+  }
 }
