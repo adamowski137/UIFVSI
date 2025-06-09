@@ -2,16 +2,14 @@
 #include "Surface.hpp"
 #include "Vector.hpp"
 #include <cstdint>
-#include <iostream>
 #include <memory>
-#include <ostream>
 #include <vector>
 
 uint16_t BezierC2::s_count = 0;
 
 BezierC2::BezierC2(const std::vector<std::shared_ptr<Object>> &points,
-                   uint16_t uPatches, uint16_t vPatches, bool cylinder)
-    : Surface(points, uPatches, vPatches, cylinder, ShaderType::SURFACEC2) {
+                   uint16_t uPatches, uint16_t vPatches)
+    : Surface(points, uPatches, vPatches, ShaderType::SURFACEC2) {
   name = "BezierCurve " + std::to_string(s_count++);
   glBindVertexArray(m_vao);
   glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
@@ -56,16 +54,9 @@ void BezierC2::setEdges() {
         }
       }
     }
-
-    if (m_cylinder) {
-      for (uint16_t v = 0; v < vPoints; v++) {
-        m_edges.push_back((uPoints - 1) * vPoints + v);
-        m_edges.push_back(v);
-      }
-    }
   }
   if (m_type == ShaderType::SURFACEC2) {
-    for (uint16_t u = 0; u < m_points.size() - (m_cylinder ? 0 : 3); u++) {
+    for (uint16_t u = 0; u < m_points.size() - 3; u++) {
       for (uint16_t v = 0; v < m_points[0].size() - 3; v++) {
         for (uint16_t du = 0; du < 4; du++) {
           for (uint16_t dv = 0; dv < 4; dv++) {
@@ -74,7 +65,7 @@ void BezierC2::setEdges() {
         }
       }
     }
-    for (uint16_t u = 0; u < m_points.size() - (m_cylinder ? 0 : 3); u++) {
+    for (uint16_t u = 0; u < m_points.size() - 3; u++) {
       for (uint16_t v = 0; v < m_points[0].size() - 3; v++) {
         for (uint16_t dv = 0; dv < 4; dv++) {
           for (uint16_t du = 0; du < 4; du++) {

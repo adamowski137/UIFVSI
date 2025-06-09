@@ -17,8 +17,7 @@ public:
     std::vector<std::shared_ptr<Object>> points =
         !cylinder ? NewPointGrid(uPatches, vPatches, pos, p1, p2)
                   : NewPointCylinder(uPatches, vPatches, pos, p1, p2);
-    std::shared_ptr<T> bezier =
-        std::make_shared<T>(points, uPatches, vPatches, cylinder);
+    std::shared_ptr<T> bezier = std::make_shared<T>(points, uPatches, vPatches);
 
     return {bezier, points};
   }

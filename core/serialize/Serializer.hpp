@@ -81,10 +81,8 @@ private:
     bool cylinder = false;
     uint16_t uPatches = 1 + (uPoints - 4) / 3;
     uint16_t vPatches = 1 + (vPoints - 4) / 3;
-    if (points[vPoints - 1] == points[vPoints * uPoints - 1])
-      cylinder = true;
 
-    auto obj = std::make_shared<T>(points, uPatches, vPatches, cylinder);
+    auto obj = std::make_shared<T>(points, uPatches, vPatches);
 
     manager->addObject(obj);
 

@@ -2,6 +2,7 @@
 
 #include "Matrix.hpp"
 #include "Vector.hpp"
+#include <cmath>
 
 class Camera {
 public:
@@ -12,6 +13,15 @@ public:
   math137::Matrix4f getInverseView() const;
   void rotateCamera(float dx, float dy);
 
+  inline void setTarget(const math137::Vector3f &v) {
+    m_target = v;
+    math137::Vector3f delta = v - m_position;
+    float xzLength = sqrtf(delta.x() * delta.x() + delta.z() * delta.z());
+    m_distance = sqrtf(delta * delta);
+    m_yaw = atan2f(delta.x(), delta.y());
+    m_pitch = atan2f(delta.y(), xzLength);
+  }
+
   inline void moveTarget(const math137::Vector3f &v) {
     m_target = m_target + v;
     recalculateView();
@@ -19,6 +29,9 @@ public:
 
   inline void changeDistance(float dx) {
     m_distance += dx;
+    static const float eps = 0.01f;
+    if (m_distance < eps)
+      m_distance = eps;
     recalculateView();
   }
 

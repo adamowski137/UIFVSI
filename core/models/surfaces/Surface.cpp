@@ -1,4 +1,5 @@
 #include "Surface.hpp"
+#include "Vector.hpp"
 #include "imgui.h"
 #include <cstdint>
 #include <memory>
@@ -6,11 +7,9 @@
 #include <vector>
 
 Surface::Surface(const std::vector<std::shared_ptr<Object>> &points,
-                 uint16_t uPatches, uint16_t vPatches, bool cylinder,
-                 ShaderType type)
-    : Object(type), m_uPatches{uPatches}, m_vPatches(vPatches),
-      m_cylinder(cylinder) {
-  uint16_t uPoints = 4 + (uPatches - 1) * 3 - (cylinder ? 1 : 0);
+                 uint16_t uPatches, uint16_t vPatches, ShaderType type)
+    : Object(type), m_uPatches{uPatches}, m_vPatches(vPatches) {
+  uint16_t uPoints = 4 + (uPatches - 1) * 3;
   uint16_t vPoints = 4 + (vPatches - 1) * 3;
 
   m_divisionsV = 4;
@@ -22,6 +21,15 @@ Surface::Surface(const std::vector<std::shared_ptr<Object>> &points,
       m_points[u][v] = points[u * vPoints + v];
     }
   }
+}
+
+math137::Vector3f Surface::getMassCenter() {
+  math137::Vector3f res;
+  for (const auto &v1 : m_points)
+    for (const auto &p : v1)
+      res = res + p.lock()->getMassCenter();
+
+  return res / (m_points.size() * m_points[0].size());
 }
 
 bool Surface::renderObjectMenu() {

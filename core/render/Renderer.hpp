@@ -16,6 +16,7 @@ public:
   void setColor(const math137::Vector4f &color);
   void setDegree(uint8_t degree);
   void setUVSubdivisions(uint16_t u, uint16_t v);
+  void reverseUV(bool r);
 
 private:
   Shader *m_selectedShader;
@@ -24,5 +25,6 @@ private:
   Shader m_curveShader;
   Shader m_surfaceShader;
   Shader m_surfaceC2Shader;
+  Shader m_gregoryShader;
   ShaderType m_type;
 };

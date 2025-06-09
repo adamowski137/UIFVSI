@@ -37,19 +37,19 @@ SurfaceBuilder::NewPointCylinder(uint16_t uPatches, uint16_t vPatches,
                                  const math137::Vector3f &pos, float r,
                                  float h) {
 
-  uint16_t uPoints = (4 + (uPatches - 1) * 3) - 1;
+  uint16_t uPoints = (4 + (uPatches - 1) * 3);
   uint16_t vPoints = (4 + (vPatches - 1) * 3);
   uint16_t totalPoints = uPoints * vPoints;
 
   std::vector<std::shared_ptr<Object>> points;
   points.reserve(totalPoints);
 
-  float da = 2 * M_PI / uPoints;
+  float da = 2 * M_PI / (uPoints - 1);
   float dz = h / vPoints;
 
   ObjectBuilder ob;
 
-  for (uint16_t u = 0; u < uPoints; u++) {
+  for (uint16_t u = 0; u < uPoints - 1; u++) {
     for (uint16_t v = 0; v < vPoints; v++) {
       points.push_back(
           ob.withNewPoint()
@@ -58,6 +58,8 @@ SurfaceBuilder::NewPointCylinder(uint16_t uPatches, uint16_t vPatches,
               .build());
     }
   }
+  for (uint16_t v = 0; v < vPoints; v++)
+    points.push_back(points[v]);
 
   return points;
 }

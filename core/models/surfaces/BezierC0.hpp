@@ -13,7 +13,7 @@
 class BezierC0 : public Surface {
 public:
   BezierC0(const std::vector<std::shared_ptr<Object>> &points,
-           uint16_t uPatches, uint16_t vPatches, bool cylinder);
+           uint16_t uPatches, uint16_t vPatches);
   ~BezierC0() {}
 
   void notify() override;

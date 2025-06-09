@@ -69,7 +69,7 @@ void Object::rotate(const math137::Quaternion &rot,
 }
 void Object::scale(float s, const math137::Vector3f &pivot) {
   math137::Vector3f axis = m_translation - pivot;
-  m_translation = pivot + (axis * s);
-  m_scale = m_scale * s;
+  m_translation = pivot + (axis * (1.f - s));
+  m_scale = m_scale * (1.f - s);
   m_update = true;
 }

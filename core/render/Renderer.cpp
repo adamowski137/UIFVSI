@@ -10,6 +10,8 @@ Renderer::Renderer()
                     "../shaders/bernstein.tes", "../shaders/bernstein.eval"),
       m_surfaceC2Shader("../shaders/surface.vs", "../shaders/surface.fs",
                         "../shaders/surface.tes", "../shaders/surfaceC2.eval"),
+      m_gregoryShader("../shaders/gregory.vs", "../shaders/gregory.fs",
+                      "../shaders/gregory.tes", "../shaders/gregory.eval"),
       m_surfaceShader("../shaders/surface.vs", "../shaders/surface.fs",
                       "../shaders/surface.tes", "../shaders/surface.eval") {
   m_selectedShader = &m_objectShader;
@@ -27,6 +29,8 @@ void Renderer::setProjection(const math137::Matrix4f &projection) {
   m_surfaceShader.setMat4("projection", projection);
   m_surfaceC2Shader.use();
   m_surfaceC2Shader.setMat4("projection", projection);
+  m_gregoryShader.use();
+  m_gregoryShader.setMat4("projection", projection);
   m_selectedShader->use();
 }
 
@@ -41,6 +45,8 @@ void Renderer::setView(const math137::Matrix4f &view) {
   m_surfaceShader.setMat4("view", view);
   m_surfaceC2Shader.use();
   m_surfaceC2Shader.setMat4("view", view);
+  m_gregoryShader.use();
+  m_gregoryShader.setMat4("view", view);
   m_selectedShader->use();
 }
 
@@ -64,6 +70,8 @@ void Renderer::setShader(const ShaderType type) {
   case ShaderType::SURFACE:
     m_selectedShader = &m_surfaceShader;
     break;
+  case ShaderType::GREGORY:
+    m_selectedShader = &m_gregoryShader;
   }
 
   m_selectedShader->use();
@@ -84,3 +92,4 @@ void Renderer::setUVSubdivisions(uint16_t u, uint16_t v) {
   m_selectedShader->setUInt("u_subdivisions", u + 1);
   m_selectedShader->setUInt("v_subdivisions", v + 1);
 }
+void Renderer::reverseUV(bool r) { m_selectedShader->setBool("reverse", r); }

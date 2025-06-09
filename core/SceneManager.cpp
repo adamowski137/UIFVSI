@@ -228,25 +228,18 @@ void SceneManager::update() {
 }
 
 void SceneManager::recalculateMassCenter() {
-  if (m_selectedObjects.size() == 0) {
-    m_massCenter.setTranslation({0.f, 0.f, 0.f});
-    return;
-  }
-
   math137::Vector3f val;
   uint16_t count = 0;
   for (const auto ind : m_selectedObjects) {
-    if (ind.expired() ||
-        std::dynamic_pointer_cast<Curve>(ind.lock()) != nullptr ||
-        std::dynamic_pointer_cast<Surface>(ind.lock()) != nullptr)
+    if (ind.expired())
       continue;
     count++;
-    val = val + ind.lock()->getTranslation();
+    val = val + ind.lock()->getMassCenter();
   }
   if (count == 0)
     m_massCenter.setTranslation({0, 0, 0});
 
-  m_massCenter.setTranslation(val * (1.f / count));
+  m_massCenter.setTranslation(val / count);
 }
 
 void SceneManager::toggleSelection(const std::weak_ptr<Object> &obj) {
@@ -309,13 +302,12 @@ SceneManager::containsCycle() const {
     for (const auto &v : nu) {
       if (u == v)
         continue;
-      const auto &nv = graph[u];
+      const auto &nv = graph[v];
       for (const auto &w : nv) {
         if (w == u || w == v)
           continue;
         const auto &nw = graph[w];
         if (nw.find(u) != nw.end()) {
-
           return {u,
                   v,
                   w,
@@ -346,8 +338,20 @@ void SceneManager::addGregoryPatch() {
   auto [p1, p2, p3, s1, s2, s3] = containsCycle();
   auto [e1, d1] = s1->getEdgeFromPoints(p1, p2);
   auto [e2, d2] = s2->getEdgeFromPoints(p2, p3);
-  auto [e3, d3] = s3->getEdgeFromPoints(p1, p3);
+  auto [e3, d3] = s3->getEdgeFromPoints(p3, p1);
+
   std::array<std::array<std::weak_ptr<Object>, 4>, 3> edges = {e1, e2, e3};
   std::array<std::array<std::weak_ptr<Object>, 4>, 3> prev = {d1, d2, d3};
-  addObject(std::shared_ptr<Gregory>(new Gregory(edges, prev)));
+  std::shared_ptr<Gregory> g = std::make_shared<Gregory>(edges, prev);
+  addObject(g);
+  for (const auto &e : edges) {
+    for (const auto &p : e) {
+      addObserver(p, g);
+    }
+  }
+  for (const auto &e : prev) {
+    for (const auto &p : e) {
+      addObserver(p, g);
+    }
+  }
 }

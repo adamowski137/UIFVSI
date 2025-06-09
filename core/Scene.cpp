@@ -136,6 +136,7 @@ void Scene::renderMenu(std::unique_ptr<SceneManager> &manager, State &state) {
     ImGuiFileDialog::Instance()->OpenDialog("ExportFile", "Export File",
                                             ".json", config);
   }
+  ImGui::SameLine();
   if (ImGui::Button("Import")) {
     IGFD::FileDialogConfig config;
     config.path = ".";

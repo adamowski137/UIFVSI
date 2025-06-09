@@ -138,6 +138,9 @@ void InputHandler::handleEvents(const std::unique_ptr<SceneManager> &manager,
       if (action == GLFW_RELEASE && key == GLFW_KEY_X) {
         state.setTransformation(Transformation::MASS);
       }
+      if (action == GLFW_RELEASE && key == GLFW_KEY_SPACE) {
+        camera.setTarget(manager->getMassCenter());
+      }
       if (action == GLFW_PRESS && key == GLFW_KEY_UP) {
         camera.moveTarget({10 * dt, 0.f, 0.f});
       }

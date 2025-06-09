@@ -49,6 +49,7 @@ public:
   virtual void render(std::shared_ptr<Renderer> &renderer,
                       const math137::Vector4f &color) = 0;
   virtual void notify() {}
+  virtual math137::Vector3f getMassCenter() { return m_translation; }
   virtual std::vector<std::weak_ptr<Object>> getVirtualObjects() const {
     return {};
   }
