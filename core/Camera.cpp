@@ -5,7 +5,7 @@
 #include <cmath>
 
 Camera::Camera(float distance, math137::Vector3f target)
-    : m_distance(distance), m_target(target),
+    : m_distance(distance), m_target(target), m_pitch(0), m_yaw(0),
       m_view(math137::MatrixUtils::Identity()) {
   recalculateView();
 }

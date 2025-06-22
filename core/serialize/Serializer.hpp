@@ -82,7 +82,15 @@ private:
     uint16_t uPatches = 1 + (uPoints - 4) / 3;
     uint16_t vPatches = 1 + (vPoints - 4) / 3;
 
-    auto obj = std::make_shared<T>(points, uPatches, vPatches);
+    std::vector<std::shared_ptr<Object>> transposed(points.size());
+
+    for (uint16_t i = 0; i < points.size(); i++) {
+      uint16_t u = i / vPoints;
+      uint16_t v = i % vPoints;
+      transposed[i] = points[v * uPoints + u];
+    }
+
+    auto obj = std::make_shared<T>(transposed, uPatches, vPatches);
 
     manager->addObject(obj);
 

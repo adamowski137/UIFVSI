@@ -3,7 +3,9 @@
 #include "models/Object.hpp"
 #include "models/ObjectBuilder.hpp"
 #include "models/curves/Curve.hpp"
+#include "models/curves/IntersectionCurve.hpp"
 #include "models/primitives/Point.hpp"
+#include "models/primitives/Torus.hpp"
 #include "models/surfaces/BezierC0.hpp"
 #include "models/surfaces/Gregory.hpp"
 #include <cstdint>
@@ -74,7 +76,7 @@ void SceneManager::deleteObserver(const std::weak_ptr<Object> &obj,
   m_notifyQueue.insert(observer);
 }
 
-void SceneManager::selectObjects(const std::set<uint8_t> &indices, bool add) {
+void SceneManager::selectObjects(const std::set<uint32_t> &indices, bool add) {
   if (!add) {
     m_selectedObjects.clear();
     deleteVirtualObjects();
@@ -279,9 +281,9 @@ void SceneManager::notifyQueue() {
   m_notifyQueue.clear();
 }
 
-std::tuple<std::shared_ptr<Object>, std::shared_ptr<Object>,
-           std::shared_ptr<Object>, std::shared_ptr<BezierC0>,
-           std::shared_ptr<BezierC0>, std::shared_ptr<BezierC0>>
+std::vector<std::tuple<std::shared_ptr<Object>, std::shared_ptr<Object>,
+                       std::shared_ptr<Object>, std::shared_ptr<BezierC0>,
+                       std::shared_ptr<BezierC0>, std::shared_ptr<BezierC0>>>
 SceneManager::containsCycle() const {
   std::map<std::shared_ptr<Object>, std::set<std::shared_ptr<Object>>> graph;
   std::map<std::shared_ptr<Object>, std::set<std::shared_ptr<BezierC0>>>
@@ -298,6 +300,13 @@ SceneManager::containsCycle() const {
     }
   }
 
+  std::vector<std::tuple<std::shared_ptr<Object>, std::shared_ptr<Object>,
+                         std::shared_ptr<Object>, std::shared_ptr<BezierC0>,
+                         std::shared_ptr<BezierC0>, std::shared_ptr<BezierC0>>>
+      res;
+  std::set<std::tuple<std::shared_ptr<Object>, std::shared_ptr<Object>,
+                      std::shared_ptr<Object>>>
+      used;
   for (const auto &[u, nu] : graph) {
     for (const auto &v : nu) {
       if (u == v)
@@ -308,18 +317,20 @@ SceneManager::containsCycle() const {
           continue;
         const auto &nw = graph[w];
         if (nw.find(u) != nw.end()) {
-          return {u,
-                  v,
-                  w,
-                  findCommonElement(pointToSurface[u], pointToSurface[v]),
-                  findCommonElement(pointToSurface[v], pointToSurface[w]),
-                  findCommonElement(pointToSurface[w], pointToSurface[u])};
+          if (checkIfCycleUsed({u, v, w}, used))
+            continue;
+          used.insert({u, v, w});
+
+          res.push_back(
+              {u, v, w, findCommonElement(pointToSurface[u], pointToSurface[v]),
+               findCommonElement(pointToSurface[v], pointToSurface[w]),
+               findCommonElement(pointToSurface[w], pointToSurface[u])});
         }
       }
     }
   }
 
-  return {};
+  return res;
 }
 std::shared_ptr<BezierC0> SceneManager::findCommonElement(
     const std::set<std::shared_ptr<BezierC0>> &a,
@@ -335,23 +346,58 @@ std::shared_ptr<BezierC0> SceneManager::findCommonElement(
 }
 
 void SceneManager::addGregoryPatch() {
-  auto [p1, p2, p3, s1, s2, s3] = containsCycle();
-  auto [e1, d1] = s1->getEdgeFromPoints(p1, p2);
-  auto [e2, d2] = s2->getEdgeFromPoints(p2, p3);
-  auto [e3, d3] = s3->getEdgeFromPoints(p3, p1);
+  for (const auto &cycle : containsCycle()) {
+    auto [p1, p2, p3, s1, s2, s3] = cycle;
+    auto [e1, d1] = s1->getEdgeFromPoints(p1, p2);
+    auto [e2, d2] = s2->getEdgeFromPoints(p2, p3);
+    auto [e3, d3] = s3->getEdgeFromPoints(p3, p1);
 
-  std::array<std::array<std::weak_ptr<Object>, 4>, 3> edges = {e1, e2, e3};
-  std::array<std::array<std::weak_ptr<Object>, 4>, 3> prev = {d1, d2, d3};
-  std::shared_ptr<Gregory> g = std::make_shared<Gregory>(edges, prev);
-  addObject(g);
-  for (const auto &e : edges) {
-    for (const auto &p : e) {
-      addObserver(p, g);
+    std::array<std::array<std::weak_ptr<Object>, 4>, 3> edges = {e1, e2, e3};
+    std::array<std::array<std::weak_ptr<Object>, 4>, 3> prev = {d1, d2, d3};
+    std::shared_ptr<Gregory> g = std::make_shared<Gregory>(edges, prev);
+    addObject(g);
+    for (const auto &e : edges) {
+      for (const auto &p : e) {
+        addObserver(p, g);
+      }
+    }
+    for (const auto &e : prev) {
+      for (const auto &p : e) {
+        addObserver(p, g);
+      }
     }
   }
-  for (const auto &e : prev) {
-    for (const auto &p : e) {
-      addObserver(p, g);
-    }
-  }
+}
+bool SceneManager::checkIfCycleUsed(
+    const std::tuple<std::shared_ptr<Object>, std::shared_ptr<Object>,
+                     std::shared_ptr<Object>> &c1,
+    const std::set<std::tuple<std::shared_ptr<Object>, std::shared_ptr<Object>,
+                              std::shared_ptr<Object>>> &used) const {
+  const auto [p1, p2, p3] = c1;
+  if (used.find({p1, p2, p3}) != used.end())
+    return true;
+  if (used.find({p1, p2, p3}) != used.end())
+    return true;
+  if (used.find({p3, p1, p2}) != used.end())
+    return true;
+  if (used.find({p2, p3, p1}) != used.end())
+    return true;
+  if (used.find({p3, p2, p1}) != used.end())
+    return true;
+  if (used.find({p1, p3, p2}) != used.end())
+    return true;
+  if (used.find({p2, p1, p3}) != used.end())
+    return true;
+  return false;
+}
+
+void SceneManager::addIntersection(const std::shared_ptr<Interceptable> &i1,
+                                   const std::shared_ptr<Interceptable> &i2) {
+  math137::Vector4f start = Interceptable::GradientDescent(i1, i2);
+  m_cursor.setTranslation(i2->getValue(start.z(), start.w()));
+  std::vector<math137::Vector3f> points =
+      Interceptable::GenerateIntersectionPoints(i1, i2, start);
+  std::shared_ptr<IntersectionCurve> curve =
+      std::make_shared<IntersectionCurve>(points);
+  addObject(curve);
 }

@@ -23,8 +23,6 @@ void IBSpline::render(std::shared_ptr<Renderer> &renderer,
   if (m_points.size() < 3)
     return;
   glBindVertexArray(m_vao);
-  glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ebo);
   renderer->setShader(m_type);
   renderer->setModel(getModel());
   renderer->setColor(color);

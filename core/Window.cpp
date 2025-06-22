@@ -6,6 +6,7 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
+#include "render/Shader.hpp"
 #include <cmath>
 #include <cstdint>
 #include <cstring>
@@ -132,7 +133,7 @@ void APIENTRY glDebugOutput(GLenum source, GLenum type, unsigned int id,
 #define glCheckError() glCheckError_(__FILE__, __LINE__)
 
 Window::Window(uint16_t width, uint16_t height, std::string title)
-    : m_camera(1.f, {0.0f, 0.0f, -1.0f}) {
+    : m_camera(1.f, {0.0f, 0.0f, 0.0f}) {
   m_state.setDimensions(width, height);
   glfwInit();
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
@@ -182,6 +183,23 @@ Window::Window(uint16_t width, uint16_t height, std::string title)
   m_manager->setInvProjection(math137::MatrixUtils::InvProjection(
       m_state.m_fov, (float)width / (float)height, m_state.m_near,
       m_state.m_far));
+  glGenTextures(1, &m_state.textureId);
+  glBindTexture(GL_TEXTURE_2D, m_state.textureId);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA,
+               GL_UNSIGNED_SHORT, nullptr);
+
+  glGenFramebuffers(1, &m_state.fbo);
+  glBindFramebuffer(GL_FRAMEBUFFER, m_state.fbo);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                         m_state.textureId, 0);
+  glGenRenderbuffers(1, &m_state.rbo);
+  glBindRenderbuffer(GL_RENDERBUFFER, m_state.rbo);
+  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8,
+                        m_state.getHeight(), m_state.getWidth());
+  glBindRenderbuffer(GL_RENDERBUFFER, 0);
+  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT,
+                            GL_RENDERBUFFER, m_state.rbo);
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 Window::~Window() {
@@ -195,10 +213,9 @@ void Window::update(bool &running) {
 
   running = !glfwWindowShouldClose(m_window.get());
 
-  glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
   m_renderer->setView(m_camera.getView());
   m_manager->notifyQueue();
+  m_scene->renderToFramebuffer(m_renderer, m_manager, m_state);
   m_scene->render(m_renderer, m_manager, m_state);
 
   float t = glfwGetTime();

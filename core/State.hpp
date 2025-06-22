@@ -17,7 +17,7 @@ public:
   inline void setDimensions(uint16_t w, uint16_t h) {
     m_width = w;
     m_height = h;
-    stencilData.resize(w * h);
+    stencilData.resize(w * h * 4);
   }
   inline void setProjection(const math137::Matrix4f proj) {
     m_projection = proj;
@@ -39,7 +39,9 @@ public:
   }
   inline uint16_t getHeight() const { return m_height; }
   inline uint16_t getWidth() const { return m_width; }
-  std::vector<uint8_t> stencilData;
+  uint32_t textureId;
+  uint32_t fbo, rbo;
+  std::vector<uint32_t> stencilData;
   const float m_fov = (M_PI_4);
   const float m_near = 0.1f;
   const float m_far = 100.f;

@@ -96,10 +96,11 @@ std::string Serializer::Serialize(const std::shared_ptr<Surface> &surface) {
   std::vector<std::string> references;
   uint16_t uPoints = 4 + (surface->m_uPatches - 1) * 3;
   uint16_t vPoints = 4 + (surface->m_vPatches - 1) * 3;
-  for (uint16_t i = 0; i < uPoints; i++) {
-    for (const auto &p : surface->m_points[i % surface->m_points.size()])
-      references.push_back("{ \"id\":" + std::to_string(p.lock()->m_id) + "}");
-  }
+  for (uint16_t v = 0; v < vPoints; v++)
+    for (uint16_t u = 0; u < uPoints; u++)
+      references.push_back(
+          "{ \"id\":" + std::to_string(surface->m_points[u][v].lock()->m_id) +
+          "}");
 
   std::stringstream ss;
   ss << "{\n";

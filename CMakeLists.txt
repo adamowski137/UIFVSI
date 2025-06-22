@@ -30,6 +30,8 @@ add_executable(${PROJECT_NAME}
   core/models/surfaces/SurfaceBuilder.cpp
   core/serialize/Serializer.cpp
   core/models/surfaces/Gregory.cpp
+  core/models/Interceptable.cpp
+  core/models/curves/IntersectionCurve.cpp
 )
 
 set(CMAKE_BUILD_TYPE Debug)

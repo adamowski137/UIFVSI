@@ -3,7 +3,9 @@
 #include "MatrixUtils.hpp"
 #include "SceneManager.hpp"
 #include "State.hpp"
+#include "Vector.hpp"
 #include "imgui.h"
+#include "models/Object.hpp"
 #include "models/ObjectBuilder.hpp"
 #include "models/surfaces/BezierC0.hpp"
 #include "models/surfaces/BezierC2.hpp"
@@ -12,26 +14,44 @@
 #include "serialize/Serializer.hpp"
 #include <ImGuiFileDialog.h>
 #include <cmath>
+#include <cstdint>
+#include <iostream>
 #include <memory>
 #include <string>
+#include <vector>
 
 class SceneManager;
 
 Scene::Scene() {}
+void Scene::renderToFramebuffer(std::shared_ptr<Renderer> &renderer,
+                                std::unique_ptr<SceneManager> &manager,
+                                const State &state) {
+
+  auto objects = manager->getDrawableObjects();
+  glBindFramebuffer(GL_FRAMEBUFFER, state.fbo);
+  glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  for (uint32_t i = 0; i < objects.size(); i++) {
+    if (objects[i].expired())
+      continue;
+    uint32_t index = i + 1;
+    objects[i].lock()->render(
+        renderer, math137::Vector4f((index & 0xff) / 255.f, 0, 0, 0));
+  }
+}
 
 void Scene::render(std::shared_ptr<Renderer> &renderer,
                    std::unique_ptr<SceneManager> &manager, const State &state) {
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   if (state.getDisplayMode() == DisplayMode::DEFAULT) {
-    // glDisable(GL_BLEND);
     renderer->setProjection(state.getProjection());
     m_ground.render(renderer, m_centerColor);
-    int idx = 1;
     auto objects = manager->getDrawableObjects();
-    for (int i = 0; i < objects.size(); i++) {
+    for (uint32_t i = 0; i < objects.size(); i++) {
       if (objects[i].expired())
         continue;
-
-      glStencilFunc(GL_ALWAYS, i + 1, 0xff);
       objects[i].lock()->render(
           renderer, manager->isSelected(objects[i])  ? m_selectedColor
                     : manager->isVirtual(objects[i]) ? m_centerColor
@@ -106,12 +126,16 @@ void Scene::renderMenu(std::unique_ptr<SceneManager> &manager, State &state) {
   }
   static bool openC0Popup = false;
   static bool openC2Popup = false;
+  static bool openIntersection = false;
   if (ImGui::Button("Add C0 surface")) {
     openC0Popup = true;
   }
   ImGui::SameLine();
   if (ImGui::Button("Add C2 surface")) {
     openC2Popup = true;
+  }
+  if (ImGui::Button("Intersect")) {
+    openIntersection = true;
   }
   if (ImGui::Button("Collapse")) {
     manager->collapseSelected();
@@ -179,6 +203,9 @@ void Scene::renderMenu(std::unique_ptr<SceneManager> &manager, State &state) {
   if (openC2Popup) {
     getSurfaceMenu<BezierC2>(openC2Popup, manager);
   }
+  if (openIntersection) {
+    getIntersectionMenu(openIntersection, manager);
+  }
   if (stereoPopup) {
     static float d = 0, p = 0.2f;
     bool change = false;
@@ -210,4 +237,33 @@ void Scene::renderMenu(std::unique_ptr<SceneManager> &manager, State &state) {
       state.setMovedProjection(m1, m2);
     }
   }
+}
+void Scene::getIntersectionMenu(bool &open,
+                                const std::unique_ptr<SceneManager> &manager) {
+  std::vector<std::shared_ptr<Object>> objects = manager->getObjects();
+  static std::shared_ptr<Object> selected1;
+  static std::shared_ptr<Object> selected2;
+
+  ImGui::Begin("Intersection", &open);
+  if (ImGui::BeginCombo("Surface 1", "")) {
+    for (const auto &obj : objects)
+      if (ImGui::Selectable(obj->name.c_str()))
+        selected1 = obj;
+    ImGui::EndCombo();
+  }
+  if (ImGui::BeginCombo("Surface 2", "")) {
+    for (const auto &obj : objects)
+      if (ImGui::Selectable(obj->name.c_str()))
+        selected2 = obj;
+    ImGui::EndCombo();
+  }
+  if (ImGui::Button("Intersect")) {
+    std::shared_ptr<Interceptable> i1 =
+        std::dynamic_pointer_cast<Interceptable>(selected1);
+    std::shared_ptr<Interceptable> i2 =
+        std::dynamic_pointer_cast<Interceptable>(selected2);
+    open = false;
+    manager->addIntersection(i1, i2);
+  }
+  ImGui::End();
 }

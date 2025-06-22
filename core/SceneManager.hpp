@@ -5,6 +5,7 @@
 #include "models/Object.hpp"
 #include "models/primitives/Cursor.hpp"
 #include "models/primitives/Point.hpp"
+#include "models/primitives/Torus.hpp"
 #include "models/surfaces/BezierC0.hpp"
 #include "models/surfaces/SurfaceBuilder.hpp"
 #include <cstdint>
@@ -43,7 +44,7 @@ public:
                    const std::weak_ptr<Object> &observer);
   void deleteObserver(const std::weak_ptr<Object> &obj,
                       const std::weak_ptr<Object> &observer);
-  void selectObjects(const std::set<uint8_t> &indices, bool add);
+  void selectObjects(const std::set<uint32_t> &indices, bool add);
   void addBezierCurve();
   void addBspline();
   void addIBspline();
@@ -59,13 +60,16 @@ public:
   void toggleSelection(const std::weak_ptr<Object> &obj);
   void notifyQueue();
   void addGregoryPatch();
+  void addIntersection(const std::shared_ptr<Interceptable> &i1,
+                       const std::shared_ptr<Interceptable> &i2);
 
   bool isSelected(const std::weak_ptr<Object> &obj) const;
   bool isVirtual(const std::weak_ptr<Object> &obj) const;
-  std::tuple<std::shared_ptr<Object>, std::shared_ptr<Object>,
-             std::shared_ptr<Object>, std::shared_ptr<BezierC0>,
-             std::shared_ptr<BezierC0>, std::shared_ptr<BezierC0>>
+  std::vector<std::tuple<std::shared_ptr<Object>, std::shared_ptr<Object>,
+                         std::shared_ptr<Object>, std::shared_ptr<BezierC0>,
+                         std::shared_ptr<BezierC0>, std::shared_ptr<BezierC0>>>
   containsCycle() const;
+  std::vector<std::shared_ptr<Interceptable>> getInterceptable() const;
 
   std::vector<std::weak_ptr<Object>> getDrawableObjects() const;
 
@@ -111,6 +115,12 @@ private:
   std::shared_ptr<BezierC0>
   findCommonElement(const std::set<std::shared_ptr<BezierC0>> &s1,
                     const std::set<std::shared_ptr<BezierC0>> &s2) const;
+  bool checkIfCycleUsed(
+      const std::tuple<std::shared_ptr<Object>, std::shared_ptr<Object>,
+                       std::shared_ptr<Object>> &c1,
+      const std::set<
+          std::tuple<std::shared_ptr<Object>, std::shared_ptr<Object>,
+                     std::shared_ptr<Object>>> &used) const;
 
   // TODO: figure where to put this
   math137::Matrix4f m_invprojection;

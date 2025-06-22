@@ -4,6 +4,7 @@
 #include "State.hpp"
 #include "Transformations.hpp"
 #include "Vector.hpp"
+#include "render/Shader.hpp"
 #include <GLFW/glfw3.h>
 #include <cstdint>
 #include <iostream>
@@ -183,11 +184,13 @@ void InputHandler::handleEvents(const std::unique_ptr<SceneManager> &manager,
         int size = 10;
         uint16_t height = fmax(endY - startY, size);
         uint16_t width = fmax(endX - startX, size);
+        glBindFramebuffer(GL_FRAMEBUFFER, state.fbo);
+        glReadBuffer(GL_COLOR_ATTACHMENT0);
         glReadPixels(startX - size / 2, startY - size / 2, width, height,
-                     GL_STENCIL_INDEX, GL_UNSIGNED_BYTE,
-                     state.stencilData.data());
-        std::set<uint8_t> data(state.stencilData.begin(),
-                               state.stencilData.begin() + height * width);
+                     GL_RGBA, GL_UNSIGNED_BYTE, state.stencilData.data());
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        std::set<uint32_t> data(state.stencilData.begin(),
+                                state.stencilData.begin() + height * width * 4);
         manager->selectObjects(data, m_keyboard[GLFW_KEY_LEFT_CONTROL]);
         manager->recalculateMassCenter();
       }

@@ -1,5 +1,6 @@
 #include "Torus.hpp"
 #include "../Object.hpp"
+#include "MatrixUtils.hpp"
 #include "Vector.hpp"
 #include <GL/glew.h>
 #include <cmath>
@@ -81,6 +82,43 @@ void Torus::render(std::shared_ptr<Renderer> &renderer,
   renderer->setColor(color);
   glDrawElements(GL_LINES, m_alphaSamples * m_betaSamples * 4, GL_UNSIGNED_INT,
                  0);
+}
+
+math137::Vector3f Torus::getValue(float u, float v) const {
+  float mu = 2.f * M_PI * u;
+  float mv = 2.f * M_PI * v;
+  float x = (m_R + m_r * cosf(mu)) * cosf(mv);
+  float y = m_r * sinf(mu);
+  float z = (m_R + m_r * cosf(mu)) * sinf(mv);
+  math137::Vector4f res = m_model * math137::Vector4f(x, y, z, 1.f);
+
+  return math137::Vector3f(res.x(), res.y(), res.z());
+}
+
+math137::Vector3f Torus::uDerivative(float u, float v) const {
+  float m = 2.f * M_PI;
+  float mu = m * u;
+  float mv = m * v;
+  math137::Vector4f local{-m_r * sinf(mu) * cosf(mv) * m, m_r * cosf(mu) * m,
+                          -m_r * sinf(mu) * sinf(mv) * m, 0};
+  math137::Vector4f res =
+      math137::MatrixUtils::FromQuaternion(m_rotation) *
+      math137::MatrixUtils::Scale(m_scale.x(), m_scale.y(), m_scale.z()) *
+      local;
+  return {res.x(), res.y(), res.z()};
+}
+
+math137::Vector3f Torus::vDerivative(float u, float v) const {
+  float m = 2.f * M_PI;
+  float mu = m * u;
+  float mv = m * v;
+  math137::Vector4f local{-(m_R + m_r * cosf(mu)) * sinf(mv) * m, 0,
+                          (m_R + m_r * cosf(mu)) * cosf(mv) * m, 0};
+  math137::Vector4f res =
+      math137::MatrixUtils::FromQuaternion(m_rotation) *
+      math137::MatrixUtils::Scale(m_scale.x(), m_scale.y(), m_scale.z()) *
+      local;
+  return {res.x(), res.y(), res.z()};
 }
 
 void Torus::setVertexData() {
