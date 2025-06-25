@@ -15,7 +15,6 @@
 #include <ImGuiFileDialog.h>
 #include <cmath>
 #include <cstdint>
-#include <iostream>
 #include <memory>
 #include <string>
 #include <vector>
@@ -25,18 +24,19 @@ class SceneManager;
 Scene::Scene() {}
 void Scene::renderToFramebuffer(std::shared_ptr<Renderer> &renderer,
                                 std::unique_ptr<SceneManager> &manager,
-                                const State &state) {
+                                const Camera &camera, const State &state) {
 
   auto objects = manager->getDrawableObjects();
   glBindFramebuffer(GL_FRAMEBUFFER, state.fbo);
   glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  renderer->setProjection(state.getProjection());
+  renderer->setView(camera.getView());
   for (uint32_t i = 0; i < objects.size(); i++) {
     if (objects[i].expired())
       continue;
     uint32_t index = i + 1;
-    objects[i].lock()->render(
-        renderer, math137::Vector4f((index & 0xff) / 255.f, 0, 0, 0));
+    objects[i].lock()->renderFramebuffer(renderer, index);
   }
 }
 
@@ -87,7 +87,7 @@ void Scene::render(std::shared_ptr<Renderer> &renderer,
 }
 
 void Scene::renderMenu(std::unique_ptr<SceneManager> &manager, State &state) {
-  if (ImGui::BeginListBox("##Objects")) {
+  if (ImGui::BeginListBox("##Objects", ImVec2(300, 500))) {
     for (const auto &obj : manager->getObjects()) {
       bool isSelected = manager->isSelected(obj);
       if (ImGui::Selectable(obj->name.c_str(), isSelected,
@@ -136,6 +136,10 @@ void Scene::renderMenu(std::unique_ptr<SceneManager> &manager, State &state) {
   }
   if (ImGui::Button("Intersect")) {
     openIntersection = true;
+  }
+  ImGui::SameLine();
+  if (ImGui::Button("To IBSpline")) {
+    manager->toIBSpline();
   }
   if (ImGui::Button("Collapse")) {
     manager->collapseSelected();
@@ -198,10 +202,10 @@ void Scene::renderMenu(std::unique_ptr<SceneManager> &manager, State &state) {
   }
 
   if (openC0Popup) {
-    getSurfaceMenu<BezierC0>(openC0Popup, manager);
+    getSurfaceMenu(openC0Popup, true, manager);
   }
   if (openC2Popup) {
-    getSurfaceMenu<BezierC2>(openC2Popup, manager);
+    getSurfaceMenu(openC2Popup, false, manager);
   }
   if (openIntersection) {
     getIntersectionMenu(openIntersection, manager);
@@ -243,27 +247,59 @@ void Scene::getIntersectionMenu(bool &open,
   std::vector<std::shared_ptr<Object>> objects = manager->getObjects();
   static std::shared_ptr<Object> selected1;
   static std::shared_ptr<Object> selected2;
-
+  static bool cursor = false;
+  static float step = 1e-3;
   ImGui::Begin("Intersection", &open);
-  if (ImGui::BeginCombo("Surface 1", "")) {
+  if (ImGui::BeginCombo("Surface 1", selected1.get() == nullptr
+                                         ? ""
+                                         : selected1->name.c_str())) {
     for (const auto &obj : objects)
-      if (ImGui::Selectable(obj->name.c_str()))
-        selected1 = obj;
+      if (std::dynamic_pointer_cast<Intersectable>(obj))
+        if (ImGui::Selectable(obj->name.c_str()))
+          selected1 = obj;
     ImGui::EndCombo();
   }
-  if (ImGui::BeginCombo("Surface 2", "")) {
+  if (ImGui::BeginCombo("Surface 2", selected2.get() == nullptr
+                                         ? ""
+                                         : selected2->name.c_str())) {
     for (const auto &obj : objects)
-      if (ImGui::Selectable(obj->name.c_str()))
-        selected2 = obj;
+      if (std::dynamic_pointer_cast<Intersectable>(obj))
+        if (ImGui::Selectable(obj->name.c_str()))
+          selected2 = obj;
     ImGui::EndCombo();
   }
+  ImGui::SliderFloat("Step", &step, 1e-3f, 1e-2);
+  ImGui::Checkbox("Use cursor", &cursor);
   if (ImGui::Button("Intersect")) {
-    std::shared_ptr<Interceptable> i1 =
-        std::dynamic_pointer_cast<Interceptable>(selected1);
-    std::shared_ptr<Interceptable> i2 =
-        std::dynamic_pointer_cast<Interceptable>(selected2);
+    std::shared_ptr<Intersectable> i1 =
+        std::dynamic_pointer_cast<Intersectable>(selected1);
+    std::shared_ptr<Intersectable> i2 =
+        std::dynamic_pointer_cast<Intersectable>(selected2);
     open = false;
-    manager->addIntersection(i1, i2);
+    manager->addIntersection(i1, i2, cursor, step);
+  }
+  ImGui::End();
+}
+void Scene::getSurfaceMenu(bool &open, bool c0,
+                           const std::unique_ptr<SceneManager> &manager) {
+  static int u = 1, v = 1;
+  static float p1 = 1.f, p2 = 1.f;
+  static int mode;
+  static const char *modes[] = {"Surface", "Cylinder"};
+
+  ImGui::Begin("Add Surface");
+  ImGui::Combo("Mode", &mode, modes, IM_ARRAYSIZE(modes));
+  ImGui::SliderInt("U Patches", &u, 1, 10);
+  ImGui::SliderInt("V Patches", &v, 1, 10);
+  ImGui::SliderFloat("R / W", &p1, 1.f, 10.f);
+  ImGui::SliderFloat("h", &p2, 1.f, 10.f);
+  if (ImGui::Button("Cancel")) {
+    open = false;
+  }
+  ImGui::SameLine();
+  if (ImGui::Button("Add")) {
+    manager->addSurface(u, v, mode == 1, p1, p2, c0);
+    open = false;
   }
   ImGui::End();
 }

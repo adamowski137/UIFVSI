@@ -5,11 +5,9 @@
 #include "imgui.h"
 #include <cstdint>
 
-uint16_t IBSpline::s_count = 0;
-
 IBSpline::IBSpline(const std::vector<std::weak_ptr<Object>> &points)
     : Curve(points) {
-  name = "IBSpline " + std::to_string(s_count++);
+  name = "IBSpline " + std::to_string(s_itemCount++);
   glBindVertexArray(m_vao);
   glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
@@ -26,6 +24,19 @@ void IBSpline::render(std::shared_ptr<Renderer> &renderer,
   renderer->setShader(m_type);
   renderer->setModel(getModel());
   renderer->setColor(color);
+  glPatchParameteri(GL_PATCH_VERTICES, 4);
+  renderer->setDegree(4);
+  glDrawArrays(GL_PATCHES, 0, 4 * (m_points.size() - 1));
+}
+
+void IBSpline::renderFramebuffer(std::shared_ptr<Renderer> &renderer,
+                                 unsigned int c) {
+  if (m_points.size() < 3)
+    return;
+  glBindVertexArray(m_vao);
+  renderer->setShader(m_type);
+  renderer->setModel(getModel());
+  renderer->setColor(c);
   glPatchParameteri(GL_PATCH_VERTICES, 4);
   renderer->setDegree(4);
   glDrawArrays(GL_PATCHES, 0, 4 * (m_points.size() - 1));

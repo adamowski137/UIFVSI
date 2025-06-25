@@ -1,5 +1,6 @@
 #include "SceneManager.hpp"
 #include "Vector.hpp"
+#include "models/IntersectionUtils.hpp"
 #include "models/Object.hpp"
 #include "models/ObjectBuilder.hpp"
 #include "models/curves/Curve.hpp"
@@ -11,6 +12,7 @@
 #include <cstdint>
 #include <iostream>
 #include <memory>
+#include <random>
 #include <vector>
 
 void SceneManager::clear() {
@@ -281,6 +283,28 @@ void SceneManager::notifyQueue() {
   m_notifyQueue.clear();
 }
 
+void SceneManager::addSurface(int uPatches, int vPatches, bool cylinder,
+                              float p1, float p2, bool c0) {
+  auto points = SurfaceBuilder::GetPointGrid(
+      uPatches, vPatches, m_cursor.getTranslation(), p1, p2, c0, cylinder);
+  std::shared_ptr<Surface> s;
+  if (c0)
+    s = std::make_shared<BezierC0>(points, uPatches, vPatches);
+  else
+    s = std::make_shared<BezierC2>(points, uPatches, vPatches);
+  std::set<std::shared_ptr<Object>> added;
+  for (const auto &v : points)
+    for (const auto &p : v) {
+      if (added.find(p) != added.end())
+        continue;
+      addObject(p);
+      added.insert(p);
+    }
+  addObject(s);
+  for (const auto &point : added) {
+    addObserver(point, s);
+  }
+}
 std::vector<std::tuple<std::shared_ptr<Object>, std::shared_ptr<Object>,
                        std::shared_ptr<Object>, std::shared_ptr<BezierC0>,
                        std::shared_ptr<BezierC0>, std::shared_ptr<BezierC0>>>
@@ -391,13 +415,40 @@ bool SceneManager::checkIfCycleUsed(
   return false;
 }
 
-void SceneManager::addIntersection(const std::shared_ptr<Interceptable> &i1,
-                                   const std::shared_ptr<Interceptable> &i2) {
-  math137::Vector4f start = Interceptable::GradientDescent(i1, i2);
-  m_cursor.setTranslation(i2->getValue(start.z(), start.w()));
-  std::vector<math137::Vector3f> points =
-      Interceptable::GenerateIntersectionPoints(i1, i2, start);
+void SceneManager::addIntersection(const std::shared_ptr<Intersectable> &i1,
+                                   const std::shared_ptr<Intersectable> &i2,
+                                   bool cur, float step) {
+  math137::Vector4f start = cur ? IntersectionUtils::StartFromCursor(
+                                      m_cursor.getTranslation(), i1, i2)
+                                : IntersectionUtils::FreeStart(i1, i2);
+  math137::Vector4f found = IntersectionUtils::GradientDescent(i1, i2, start);
+  std::cout << i1->getValue(found.x(), found.y()) << std::endl;
+  std::cout << i2->getValue(found.z(), found.w()) << std::endl;
+  m_cursor.setTranslation(i2->getValue(found.z(), found.w()));
   std::shared_ptr<IntersectionCurve> curve =
-      std::make_shared<IntersectionCurve>(points);
+      std::make_shared<IntersectionCurve>(found, i1, i2, step);
   addObject(curve);
+}
+
+void SceneManager::toIBSpline() {
+  ObjectBuilder ob;
+  for (const auto &obj : m_selectedObjects) {
+    if (std::shared_ptr<IntersectionCurve> i =
+            std::dynamic_pointer_cast<IntersectionCurve>(obj.lock())) {
+      std::vector<math137::Vector3f> points = i->getPoints();
+      std::vector<std::weak_ptr<Object>> pointObjects;
+      for (const auto &p : points) {
+        std::shared_ptr<Object> point =
+            ob.withNewPoint().withPosition(p).build();
+        pointObjects.push_back(point);
+        addObject(point);
+      }
+      std::shared_ptr<Object> bspline =
+          ObjectBuilder().withNewIBSpline(pointObjects).build();
+      addObject(bspline);
+      for (const auto &p : pointObjects) {
+        addObserver(p, bspline);
+      }
+    }
+  }
 }

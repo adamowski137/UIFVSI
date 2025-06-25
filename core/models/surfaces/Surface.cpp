@@ -6,11 +6,12 @@
 #include <sys/types.h>
 #include <vector>
 
-Surface::Surface(const std::vector<std::shared_ptr<Object>> &points,
-                 uint16_t uPatches, uint16_t vPatches, ShaderType type)
+Surface::Surface(
+    const std::vector<std::vector<std::shared_ptr<Object>>> &points,
+    uint16_t uPatches, uint16_t vPatches, ShaderType type)
     : Object(type), m_uPatches{uPatches}, m_vPatches(vPatches) {
-  uint16_t uPoints = 4 + (uPatches - 1) * 3;
-  uint16_t vPoints = 4 + (vPatches - 1) * 3;
+  uint16_t uPoints = points.size();
+  uint16_t vPoints = points[0].size();
 
   m_divisionsV = 4;
   m_divisionsU = 4;
@@ -18,7 +19,7 @@ Surface::Surface(const std::vector<std::shared_ptr<Object>> &points,
   m_points.resize(uPoints, std::vector<std::weak_ptr<Object>>(vPoints));
   for (uint16_t u = 0; u < uPoints; u++) {
     for (uint16_t v = 0; v < vPoints; v++) {
-      m_points[u][v] = points[u * vPoints + v];
+      m_points[u][v] = points[u][v];
     }
   }
 }

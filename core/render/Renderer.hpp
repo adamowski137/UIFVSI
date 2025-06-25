@@ -14,8 +14,10 @@ public:
   void setModel(const math137::Matrix4f &model);
   void setShader(const ShaderType type);
   void setColor(const math137::Vector4f &color);
+  void setColor(unsigned int c);
   void setDegree(uint8_t degree);
   void setUVSubdivisions(uint16_t u, uint16_t v);
+  void setUVpatches(uint16_t u, uint16_t v);
   void reverseUV(bool r);
 
 private:

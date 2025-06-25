@@ -84,6 +84,14 @@ void Renderer::setDegree(uint8_t degree) {
 void Renderer::setColor(const math137::Vector4f &color) {
   m_selectedShader->setVec4("color", color);
 }
+void Renderer::setColor(unsigned int c) {
+  float r = (c & 0xFF) / 255.f;
+  float g = ((c >> 8) & 0xFF) / 255.f;
+  float b = ((c >> 16) & 0xFF) / 255.f;
+  float a = ((c >> 24) & 0xFF) / 255.f;
+
+  m_selectedShader->setVec4("color", {r, g, b, a});
+}
 
 void Renderer::setModel(const math137::Matrix4f &model) {
   m_selectedShader->setMat4("model", model);
@@ -91,5 +99,9 @@ void Renderer::setModel(const math137::Matrix4f &model) {
 void Renderer::setUVSubdivisions(uint16_t u, uint16_t v) {
   m_selectedShader->setUInt("u_subdivisions", u + 1);
   m_selectedShader->setUInt("v_subdivisions", v + 1);
+}
+void Renderer::setUVpatches(uint16_t u, uint16_t v) {
+  m_selectedShader->setUInt("uPatches", u);
+  m_selectedShader->setUInt("vPatches", v);
 }
 void Renderer::reverseUV(bool r) { m_selectedShader->setBool("reverse", r); }

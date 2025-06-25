@@ -163,8 +163,7 @@ void Serializer::Deserialize(const json &j,
   manager->clear();
   std::map<uint16_t, std::shared_ptr<Object>> points;
   for (const auto &p : j["points"]) {
-    auto point = DeserializePoint(p);
-    points.emplace(point->m_id, point);
+    auto point = DeserializePoint(p, points);
     manager->addObject(point);
   }
   for (const auto &obj : j["geometry"]) {
@@ -178,18 +177,96 @@ void Serializer::Deserialize(const json &j,
     if (name == "interpolatedC2")
       DeserializeCurve<IBSpline>(obj, points, manager);
     if (name == "bezierSurfaceC0")
-      DeserializeSurface<BezierC0>(obj, points, manager);
+      DeserializeSurfaceC0(obj, points, manager);
     if (name == "bezierSurfaceC2")
-      DeserializeSurface<BezierC2>(obj, points, manager);
+      DeserializeSurfaceC2(obj, points, manager);
   }
 }
 
-std::shared_ptr<Object> Serializer::DeserializePoint(const json &j) {
+std::shared_ptr<Object> Serializer::DeserializePoint(
+    const json &j, std::map<uint16_t, std::shared_ptr<Object>> &pointMap) {
   math137::Vector3f pos;
   uint16_t id;
   id = j["id"];
   pos = DeserializeVector(j["position"]);
-  return ObjectBuilder().withNewPoint().withId(id).withPosition(pos).build();
+  auto obj = ObjectBuilder().withNewPoint().withPosition(pos).build();
+  pointMap[id] = obj;
+  return obj;
+}
+void Serializer::DeserializeSurfaceC0(
+    const json &j, const std::map<uint16_t, std::shared_ptr<Object>> pointMap,
+    const std::unique_ptr<SceneManager> &manager) {
+  uint16_t uPoints, vPoints, m_uSubdivisions, m_vSubdivisions;
+  std::vector<std::shared_ptr<Object>> points;
+
+  uPoints = j["size"]["u"];
+  vPoints = j["size"]["v"];
+
+  m_uSubdivisions = j["samples"]["u"];
+  m_vSubdivisions = j["samples"]["v"];
+
+  for (const auto &p : j["controlPoints"]) {
+    points.push_back(pointMap.at(p["id"]));
+  }
+
+  bool cylinder = false;
+  uint16_t uPatches = 1 + (uPoints - 4) / 3;
+  uint16_t vPatches = 1 + (vPoints - 4) / 3;
+
+  std::vector<std::vector<std::shared_ptr<Object>>> transposed(
+      uPoints, std::vector<std::shared_ptr<Object>>(vPoints));
+
+  for (uint16_t i = 0; i < points.size(); i++) {
+    uint16_t u = i / vPoints;
+    uint16_t v = i % vPoints;
+    transposed[u][v] = points[v * uPoints + u];
+  }
+
+  auto obj = std::make_shared<BezierC0>(transposed, uPatches, vPatches);
+
+  manager->addObject(obj);
+
+  for (const auto &p : points) {
+    manager->addObserver(p, obj);
+  }
+}
+
+void Serializer::DeserializeSurfaceC2(
+    const json &j, const std::map<uint16_t, std::shared_ptr<Object>> pointMap,
+    const std::unique_ptr<SceneManager> &manager) {
+  uint16_t uPoints, vPoints, m_uSubdivisions, m_vSubdivisions;
+  std::vector<std::shared_ptr<Object>> points;
+
+  uPoints = j["size"]["u"];
+  vPoints = j["size"]["v"];
+
+  m_uSubdivisions = j["samples"]["u"];
+  m_vSubdivisions = j["samples"]["v"];
+
+  for (const auto &p : j["controlPoints"]) {
+    points.push_back(pointMap.at(p["id"]));
+  }
+
+  bool cylinder = false;
+  uint16_t uPatches = uPoints - 3;
+  uint16_t vPatches = vPoints - 3;
+
+  std::vector<std::vector<std::shared_ptr<Object>>> transposed(
+      uPoints, std::vector<std::shared_ptr<Object>>(vPoints));
+
+  for (uint16_t i = 0; i < points.size(); i++) {
+    uint16_t u = i / vPoints;
+    uint16_t v = i % vPoints;
+    transposed[u][v] = points[v * uPoints + u];
+  }
+
+  auto obj = std::make_shared<BezierC2>(transposed, uPatches, vPatches);
+
+  manager->addObject(obj);
+
+  for (const auto &p : points) {
+    manager->addObserver(p, obj);
+  }
 }
 
 void Serializer::DeserializeTorus(
@@ -215,6 +292,7 @@ void Serializer::DeserializeTorus(
   t->m_rotation = quat;
   t->m_scale = scale;
   t->setVertexData();
+  t->recalculateModel();
 
   manager->addObject(t);
 }

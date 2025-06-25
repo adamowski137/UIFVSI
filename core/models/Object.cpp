@@ -57,6 +57,7 @@ bool Object::setNameMenu() {
 
   return change;
 }
+
 void Object::rotate(const math137::Quaternion &rot,
                     const math137::Vector3f &pivot) {
   math137::Vector3f translatedPos = m_translation - pivot;

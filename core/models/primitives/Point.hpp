@@ -11,9 +11,12 @@ public:
   Point();
   ~Point() {}
 
-  bool renderObjectMenu() override;
-  void render(std::shared_ptr<Renderer> &renderer,
-              const math137::Vector4f &color) override;
+  virtual bool renderObjectMenu() override;
+  virtual void render(std::shared_ptr<Renderer> &renderer,
+                      const math137::Vector4f &color) override;
+
+  virtual void renderFramebuffer(std::shared_ptr<Renderer> &renderer,
+                                 unsigned int id) override;
 
 protected:
   void recalculateModel() override;
@@ -25,6 +28,4 @@ private:
   const uint16_t m_latSamples = 100;
   const uint16_t m_longSamples = 100;
   const float m_radius = 0.005f;
-
-  static uint16_t s_count;
 };

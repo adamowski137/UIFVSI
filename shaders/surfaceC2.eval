@@ -1,12 +1,15 @@
 #version 460 core
 
 layout (isolines, fractional_even_spacing, ccw) in;
+out vec2 fuv;
+in vec2 euv[];
 
 uniform mat4 view;
 uniform mat4 projection;
 
 uniform uint u_subdivisions;
 uniform uint v_subdivisions;
+uniform bool reverse;
 
 vec3 p(uint up, uint vp) {
     return gl_in[up * 4 + vp].gl_Position.xyz;
@@ -46,4 +49,8 @@ void main() {
     }
 
     gl_Position = projection * view * vec4(position, 1.0);
+    fuv = vec2(v, u);
+    if(reverse){
+      fuv = vec2(u, v);
+    }
 }

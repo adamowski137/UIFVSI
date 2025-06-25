@@ -11,6 +11,8 @@ public:
   BSpline(const std::vector<std::weak_ptr<Object>> &points);
   void render(std::shared_ptr<Renderer> &renderer,
               const math137::Vector4f &color) override;
+  void renderFramebuffer(std::shared_ptr<Renderer> &renderer,
+                         unsigned int id) override;
   bool renderObjectMenu() override;
   void notify() override;
   std::vector<std::weak_ptr<Object>> getVirtualObjects() const override;
@@ -25,6 +27,4 @@ private:
   std::string getTypeName() const override { return "bezierC2"; }
 
   std::vector<std::shared_ptr<Object>> m_bernsteinPoints;
-
-  static uint16_t s_count;
 };

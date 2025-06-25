@@ -6,11 +6,9 @@
 #include <numeric>
 #include <vector>
 
-uint16_t BezierCurve::s_count = 0;
-
 BezierCurve::BezierCurve(const std::vector<std::weak_ptr<Object>> &points)
     : Curve(points) {
-  name = "BezierCurve " + std::to_string(s_count++);
+  name = "BezierCurve " + std::to_string(s_itemCount++);
   glBindVertexArray(m_vao);
   glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
@@ -64,6 +62,34 @@ void BezierCurve::setEdges() const {
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ebo);
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint16_t),
                indices.data(), GL_STATIC_DRAW);
+}
+
+void BezierCurve::renderFramebuffer(std::shared_ptr<Renderer> &renderer,
+                                    unsigned int c) {
+  if (m_points.size() < 2)
+    return;
+  glBindVertexArray(m_vao);
+  glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ebo);
+  renderer->setShader(m_type);
+  renderer->setModel(getModel());
+  renderer->setColor(c);
+  if (m_type == ShaderType::OBJECT) {
+    glDrawArrays(GL_LINE_STRIP, 0, m_points.size());
+  }
+  if (m_type == ShaderType::CURVE) {
+    uint16_t sizeFull = (m_points.size() - 1) / 3;
+    uint16_t sizeMissing = (m_points.size() - 1) % 3;
+    glPatchParameteri(GL_PATCH_VERTICES, 4);
+    renderer->setDegree(4);
+    glDrawElements(GL_PATCHES, 4 * sizeFull, GL_UNSIGNED_SHORT, 0);
+    glPatchParameteri(GL_PATCH_VERTICES, sizeMissing + 1);
+    if (sizeMissing == 0)
+      return;
+    renderer->setDegree(sizeMissing + 1);
+    glDrawElements(GL_PATCHES, sizeMissing + 1, GL_UNSIGNED_SHORT,
+                   (void *)(4 * sizeFull * sizeof(uint16_t)));
+  }
 }
 
 void BezierCurve::render(std::shared_ptr<Renderer> &renderer,

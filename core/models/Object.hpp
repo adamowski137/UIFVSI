@@ -48,6 +48,8 @@ public:
   virtual bool renderObjectMenu() = 0;
   virtual void render(std::shared_ptr<Renderer> &renderer,
                       const math137::Vector4f &color) = 0;
+  virtual void renderFramebuffer(std::shared_ptr<Renderer> &renderer,
+                                 unsigned int id) {}
   virtual void notify() {}
   virtual math137::Vector3f getMassCenter() { return m_translation; }
   virtual std::vector<std::weak_ptr<Object>> getVirtualObjects() const {
@@ -81,6 +83,7 @@ protected:
   bool m_openMenu;
   ShaderType m_type;
 
-private:
   static uint16_t s_itemCount;
+
+private:
 };

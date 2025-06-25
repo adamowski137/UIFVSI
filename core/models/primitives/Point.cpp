@@ -9,10 +9,8 @@
 #include <string>
 #include <vector>
 
-uint16_t Point::s_count = 0;
-
 Point::Point() : Object(ShaderType::POINT) {
-  name = "Point " + std::to_string(s_count++);
+  name = "Point " + std::to_string(s_itemCount++);
   glBindVertexArray(m_vao);
   glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
@@ -81,6 +79,17 @@ void Point::render(std::shared_ptr<Renderer> &renderer,
   renderer->setShader(m_type);
   renderer->setModel(getModel());
   renderer->setColor(color);
+  glDrawElements(GL_TRIANGLES, 6 * m_latSamples * m_longSamples,
+                 GL_UNSIGNED_SHORT, 0);
+}
+void Point::renderFramebuffer(std::shared_ptr<Renderer> &renderer,
+                              unsigned int id) {
+  glBindVertexArray(m_vao);
+  glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ebo);
+  renderer->setShader(m_type);
+  renderer->setModel(getModel());
+  renderer->setColor(id);
   glDrawElements(GL_TRIANGLES, 6 * m_latSamples * m_longSamples,
                  GL_UNSIGNED_SHORT, 0);
 }

@@ -7,7 +7,6 @@
 #include "render/Shader.hpp"
 #include <GLFW/glfw3.h>
 #include <cstdint>
-#include <iostream>
 #include <set>
 
 void InputHandler::registerMouseClick(int key, int action, float x, float y) {
@@ -187,10 +186,16 @@ void InputHandler::handleEvents(const std::unique_ptr<SceneManager> &manager,
         glBindFramebuffer(GL_FRAMEBUFFER, state.fbo);
         glReadBuffer(GL_COLOR_ATTACHMENT0);
         glReadPixels(startX - size / 2, startY - size / 2, width, height,
-                     GL_RGBA, GL_UNSIGNED_BYTE, state.stencilData.data());
+                     GL_RGBA, GL_UNSIGNED_INT_8_8_8_8,
+                     state.stencilData.data());
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        std::set<uint32_t> data(state.stencilData.begin(),
-                                state.stencilData.begin() + height * width * 4);
+        std::set<uint32_t> data;
+        for (int i = 0; i < (width * height); i++) {
+          uint32_t id = state.stencilData[i];
+          id = ((id & 0xFF) << 24) + (((id >> 8) & 0xFF) << 16) + (((id >> 16) & 0xFF) << 8) +
+               (id >> 24);
+          data.insert(id);
+        }
         manager->selectObjects(data, m_keyboard[GLFW_KEY_LEFT_CONTROL]);
         manager->recalculateMassCenter();
       }

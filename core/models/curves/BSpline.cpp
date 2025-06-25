@@ -8,11 +8,9 @@
 #include <utility>
 #include <vector>
 
-uint16_t BSpline::s_count = 0;
-
 BSpline::BSpline(const std::vector<std::weak_ptr<Object>> &points)
     : Curve(points) {
-  name = "BSpline " + std::to_string(s_count++);
+  name = "BSpline " + std::to_string(s_itemCount++);
   glBindVertexArray(m_vao);
   glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
@@ -96,6 +94,21 @@ void BSpline::render(std::shared_ptr<Renderer> &renderer,
   renderer->setShader(m_type);
   renderer->setModel(getModel());
   renderer->setColor(color);
+  glPatchParameteri(GL_PATCH_VERTICES, 4);
+  renderer->setDegree(4);
+  glDrawArrays(GL_PATCHES, 0, 4 * (m_points.size() - 3));
+}
+
+void BSpline::renderFramebuffer(std::shared_ptr<Renderer> &renderer,
+                                unsigned int c) {
+  if (m_points.size() < 4)
+    return;
+  glBindVertexArray(m_vao);
+  glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ebo);
+  renderer->setShader(m_type);
+  renderer->setModel(getModel());
+  renderer->setColor(c);
   glPatchParameteri(GL_PATCH_VERTICES, 4);
   renderer->setDegree(4);
   glDrawArrays(GL_PATCHES, 0, 4 * (m_points.size() - 3));

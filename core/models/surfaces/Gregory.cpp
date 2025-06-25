@@ -202,6 +202,24 @@ void Gregory::setEdges() {
   }
 }
 
+void Gregory::renderFramebuffer(std::shared_ptr<Renderer> &renderer,
+                                unsigned int c) {
+  glBindVertexArray(m_vao);
+  renderer->setShader(m_type);
+  renderer->setModel(math137::MatrixUtils::Identity());
+  renderer->setColor(c);
+  if (m_type == ShaderType::GREGORY) {
+    glPatchParameteri(GL_PATCH_VERTICES, 20);
+    renderer->setUVSubdivisions(m_vSubdivisions, m_uSubdivisions);
+    glDrawElements(GL_PATCHES, 60, GL_UNSIGNED_SHORT, (void *)0);
+    renderer->setUVSubdivisions(m_uSubdivisions, m_vSubdivisions);
+    glDrawElements(GL_PATCHES, 3 * 20, GL_UNSIGNED_SHORT,
+                   (void *)(60 * sizeof(uint16_t)));
+  } else {
+    glDrawElements(GL_LINES, 3 * 28, GL_UNSIGNED_SHORT, (void *)0);
+  }
+}
+
 void Gregory::render(std::shared_ptr<Renderer> &renderer,
                      const math137::Vector4f &color) {
   glBindVertexArray(m_vao);

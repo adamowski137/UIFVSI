@@ -7,6 +7,7 @@
 #include "models/primitives/Point.hpp"
 #include "models/primitives/Torus.hpp"
 #include "models/surfaces/BezierC0.hpp"
+#include "models/surfaces/BezierC2.hpp"
 #include "models/surfaces/SurfaceBuilder.hpp"
 #include <cstdint>
 #include <map>
@@ -60,8 +61,10 @@ public:
   void toggleSelection(const std::weak_ptr<Object> &obj);
   void notifyQueue();
   void addGregoryPatch();
-  void addIntersection(const std::shared_ptr<Interceptable> &i1,
-                       const std::shared_ptr<Interceptable> &i2);
+  void addIntersection(const std::shared_ptr<Intersectable> &i1,
+                       const std::shared_ptr<Intersectable> &i2, bool cur,
+                       float step);
+  void toIBSpline();
 
   bool isSelected(const std::weak_ptr<Object> &obj) const;
   bool isVirtual(const std::weak_ptr<Object> &obj) const;
@@ -69,7 +72,7 @@ public:
                          std::shared_ptr<Object>, std::shared_ptr<BezierC0>,
                          std::shared_ptr<BezierC0>, std::shared_ptr<BezierC0>>>
   containsCycle() const;
-  std::vector<std::shared_ptr<Interceptable>> getInterceptable() const;
+  std::vector<std::shared_ptr<Intersectable>> getIntersectable() const;
 
   std::vector<std::weak_ptr<Object>> getDrawableObjects() const;
 
@@ -94,20 +97,8 @@ public:
   }
   inline math137::Matrix4f getInvProjection() { return m_invprojection; }
 
-  template <typename T>
-  void addSurface(int uPatches, int vPatches, bool cylinder, float p1,
-                  float p2) {
-    auto [surface, points] = SurfaceBuilder::NewPatch<T>(
-        uPatches, vPatches, m_cursor.getTranslation(), cylinder, p1, p2);
-    for (const auto &p : points) {
-      addObject(p);
-    }
-    addObject(surface);
-    for (const auto &point : points) {
-      addObserver(point, surface);
-    }
-  }
-
+  void addSurface(int uPatches, int vPatches, bool cylinder, float p1, float p2,
+                  bool c0);
   Point m_massCenter;
   Cursor m_cursor;
 

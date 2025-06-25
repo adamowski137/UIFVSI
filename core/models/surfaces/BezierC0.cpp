@@ -2,35 +2,43 @@
 #include "Surface.hpp"
 #include "Vector.hpp"
 #include <array>
+#include <cmath>
 #include <cstdint>
 #include <memory>
 #include <sys/types.h>
 #include <utility>
 #include <vector>
 
-uint16_t BezierC0::s_count = 0;
-
-BezierC0::BezierC0(const std::vector<std::shared_ptr<Object>> &points,
-                   uint16_t uPatches, uint16_t vPatches)
+BezierC0::BezierC0(
+    const std::vector<std::vector<std::shared_ptr<Object>>> &points,
+    uint16_t uPatches, uint16_t vPatches)
     : Surface(points, uPatches, vPatches, ShaderType::SURFACE) {
-  name = "BezierCurve " + std::to_string(s_count++);
+  name = "BezierSurfaceC0 " + std::to_string(s_itemCount++);
   glBindVertexArray(m_vao);
   glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)0);
   glEnableVertexAttribArray(0);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ebo);
+  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
+                        (void *)(3 * (sizeof(float))));
+  glEnableVertexAttribArray(1);
   setVertices();
   setEdges();
 }
 
 void BezierC0::setVertices() {
   std::vector<float> points;
+  float diffU = 1.f / (m_points.size() - 1);
+  float diffV = 1.f / (m_points[0].size() - 1);
   for (uint16_t u = 0; u < m_points.size(); u++) {
     for (uint16_t v = 0; v < m_points[0].size(); v++) {
+      float nu = diffU * u;
+      float nv = diffV * v;
       math137::Vector3f p = m_points[u][v].lock()->getTranslation();
       points.push_back(p.x());
       points.push_back(p.y());
       points.push_back(p.z());
+      points.push_back(nu);
+      points.push_back(nv);
     }
   }
   glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
@@ -86,11 +94,38 @@ void BezierC0::notify() { setVertices(); }
 void BezierC0::render(std::shared_ptr<Renderer> &renderer,
                       const math137::Vector4f &color) {
   glBindVertexArray(m_vao);
+  renderer->setShader(m_type);
+  renderer->setModel(getModel());
+  renderer->setColor(color);
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, m_trimmingTexture);
+  if (m_type == ShaderType::SURFACE) {
+    renderer->reverseUV(false);
+    renderer->setUVpatches(m_uPatches, m_vPatches);
+    renderer->setUVSubdivisions(m_divisionsU, m_divisionsV);
+    glPatchParameteri(GL_PATCH_VERTICES, 16);
+    glDrawElements(GL_PATCHES, m_edges.size() / 2, GL_UNSIGNED_SHORT,
+                   (void *)0);
+    renderer->setUVSubdivisions(m_divisionsV, m_divisionsU);
+    renderer->setUVpatches(m_vPatches, m_uPatches);
+    renderer->reverseUV(true);
+    glDrawElements(GL_PATCHES, m_edges.size() / 2, GL_UNSIGNED_SHORT,
+                   (void *)(sizeof(uint16_t) * m_edges.size() / 2));
+  }
+  if (m_type == ShaderType::OBJECT) {
+    glDrawElements(GL_LINES, m_edges.size(), GL_UNSIGNED_SHORT, (void *)0);
+  }
+  glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void BezierC0::renderFramebuffer(std::shared_ptr<Renderer> &renderer,
+                                 unsigned int c) {
+  glBindVertexArray(m_vao);
   glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ebo);
   renderer->setShader(m_type);
   renderer->setModel(getModel());
-  renderer->setColor(color);
+  renderer->setColor(c);
   if (m_type == ShaderType::SURFACE) {
     renderer->setUVSubdivisions(m_divisionsU, m_divisionsV);
     glPatchParameteri(GL_PATCH_VERTICES, 16);
@@ -197,4 +232,82 @@ BezierC0::getEdgeFromPoints(const std::shared_ptr<Object> &p1,
       m_points[(ru + up1) * 3 + 2 * du + ddu][(rv + vp1) * 3 + 2 * dv + ddv],
       m_points[(ru + up1) * 3 + 3 * du + ddu][(rv + vp1) * 3 + 3 * dv + ddv]};
   return {points, diff};
+}
+float BezierC0::bernstein(int i, float t) const {
+  switch (i) {
+  case 0:
+    return (1 - t) * (1 - t) * (1 - t);
+  case 1:
+    return 3 * t * (1 - t) * (1 - t);
+  case 2:
+    return 3 * t * t * (1 - t);
+  case 3:
+    return t * t * t;
+  default:
+    return 0;
+  }
+}
+
+float BezierC0::dbernstein(int i, float t) const {
+  switch (i) {
+  case 0:
+    return -3 * (1 - t) * (1 - t);
+  case 1:
+    return 9 * t * t - 12 * t + 3;
+  case 2:
+    return 3 * t * (2 - 3 * t);
+  case 3:
+    return 3 * t * t;
+  default:
+    return 0;
+  }
+}
+
+math137::Vector3f BezierC0::getValue(float u, float v) const {
+  int uIndex = std::min(int(u * m_uPatches), m_uPatches - 1);
+  int vIndex = std::min(int(v * m_vPatches), m_vPatches - 1);
+  float nu = (u * m_uPatches) - uIndex;
+  float nv = (v * m_vPatches) - vIndex;
+  math137::Vector3f local;
+  for (uint16_t du = 0; du < 4; du++) {
+    for (uint16_t dv = 0; dv < 4; dv++) {
+      local =
+          local +
+          m_points[3 * uIndex + du][3 * vIndex + dv].lock()->getTranslation() *
+              bernstein(du, nu) * bernstein(dv, nv);
+    }
+  }
+  return local;
+}
+math137::Vector3f BezierC0::uDerivative(float u, float v) const {
+  int uIndex = std::min(int(u * m_uPatches), m_uPatches - 1);
+  int vIndex = std::min(int(v * m_vPatches), m_vPatches - 1);
+  float nu = (u * m_uPatches) - uIndex;
+  float nv = (v * m_vPatches) - vIndex;
+  math137::Vector3f local;
+  for (uint16_t du = 0; du < 4; du++) {
+    for (uint16_t dv = 0; dv < 4; dv++) {
+      local =
+          local +
+          m_points[3 * uIndex + du][3 * vIndex + dv].lock()->getTranslation() *
+              dbernstein(du, nu) * bernstein(dv, nv);
+    }
+  }
+  return local;
+}
+math137::Vector3f BezierC0::vDerivative(float u, float v) const {
+  int uIndex = std::min(int(u * m_uPatches), m_uPatches - 1);
+  int vIndex = std::min(int(v * m_vPatches), m_vPatches - 1);
+  float nu = (u * m_uPatches) - uIndex;
+  float nv = (v * m_vPatches) - vIndex;
+  math137::Vector3f local;
+  for (uint16_t du = 0; du < 4; du++) {
+    for (uint16_t dv = 0; dv < 4; dv++) {
+      local =
+          local +
+          m_points[3 * uIndex + du][3 * vIndex + dv].lock()->getTranslation() *
+              bernstein(du, nu) * dbernstein(dv, nv);
+    }
+  }
+  return local;
 }

@@ -2,6 +2,7 @@
 #include "../Object.hpp"
 #include "MatrixUtils.hpp"
 #include "Vector.hpp"
+#include <GL/gl.h>
 #include <GL/glew.h>
 #include <cmath>
 #include <cstdint>
@@ -9,19 +10,20 @@
 #include <string>
 #include <vector>
 
-uint16_t Torus::s_count = 0;
-
 Torus::Torus(float R, float r)
     : Object(ShaderType::OBJECT), m_R{R}, m_r{r}, m_alphaSamples(10),
       m_betaSamples(30) {
   glGenVertexArrays(1, &m_vao);
   glGenBuffers(1, &m_vbo);
   glGenBuffers(1, &m_ebo);
-  name = "Torus " + std::to_string(s_count++);
+  name = "Torus " + std::to_string(s_itemCount++);
   glBindVertexArray(m_vao);
   glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)0);
   glEnableVertexAttribArray(0);
+  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
+                        (void *)(3 * sizeof(float)));
+  glEnableVertexAttribArray(1);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ebo);
 
   setVertexData();
@@ -36,17 +38,21 @@ void Torus::setRadius(float r, float R) {
 
 std::vector<float> Torus::getMesh() {
   std::vector<float> points;
-  points.reserve(3 * m_alphaSamples * m_betaSamples);
+  points.reserve(5 * m_alphaSamples * m_betaSamples);
   for (uint16_t j = 0; j < m_betaSamples; j++) {
-    float beta = j * ((2 * M_PI) / m_betaSamples);
+    float v = j / (float)(m_betaSamples - 1);
     for (uint16_t i = 0; i < m_alphaSamples; i++) {
-      float alpha = i * ((2 * M_PI) / m_alphaSamples);
-      float x = (m_R + m_r * cosf(alpha)) * cosf(beta);
-      float y = m_r * sinf(alpha);
-      float z = (m_R + m_r * cosf(alpha)) * sinf(beta);
+      float u = i / (float)(m_alphaSamples - 1);
+      float mu = 2.f * M_PI * u;
+      float mv = 2.f * M_PI * v;
+      float x = (m_R + m_r * cosf(mu)) * cosf(mv);
+      float y = m_r * sinf(mu);
+      float z = (m_R + m_r * cosf(mu)) * sinf(mv);
       points.push_back(x);
       points.push_back(y);
       points.push_back(z);
+      points.push_back(v);
+      points.push_back(u);
     }
   }
 
@@ -72,16 +78,29 @@ std::vector<uint32_t> Torus::getEdges() {
   return result;
 }
 
-void Torus::render(std::shared_ptr<Renderer> &renderer,
-                   const math137::Vector4f &color) {
+void Torus::renderFramebuffer(std::shared_ptr<Renderer> &renderer,
+                              unsigned int c) {
   glBindVertexArray(m_vao);
   glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ebo);
   renderer->setShader(m_type);
   renderer->setModel(getModel());
+  renderer->setColor(c);
+  glDrawElements(GL_LINES, m_alphaSamples * m_betaSamples * 4, GL_UNSIGNED_INT,
+                 0);
+}
+
+void Torus::render(std::shared_ptr<Renderer> &renderer,
+                   const math137::Vector4f &color) {
+  glBindVertexArray(m_vao);
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, m_trimmingTexture);
+  renderer->setShader(m_type);
+  renderer->setModel(getModel());
   renderer->setColor(color);
   glDrawElements(GL_LINES, m_alphaSamples * m_betaSamples * 4, GL_UNSIGNED_INT,
                  0);
+  glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 math137::Vector3f Torus::getValue(float u, float v) const {

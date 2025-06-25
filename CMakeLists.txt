@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.30)
-set(set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON))
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(uifvsi)
 add_executable(${PROJECT_NAME} 
@@ -30,7 +30,8 @@ add_executable(${PROJECT_NAME}
   core/models/surfaces/SurfaceBuilder.cpp
   core/serialize/Serializer.cpp
   core/models/surfaces/Gregory.cpp
-  core/models/Interceptable.cpp
+  core/models/IntersectionUtils.cpp
+  core/models/Intersectable.cpp
   core/models/curves/IntersectionCurve.cpp
 )
 

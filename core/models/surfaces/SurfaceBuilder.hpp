@@ -9,24 +9,22 @@
 
 class SurfaceBuilder {
 public:
-  template <typename T>
-  static std::pair<std::shared_ptr<Surface>,
-                   std::vector<std::shared_ptr<Object>>>
-  NewPatch(uint16_t uPatches, uint16_t vPatches, const math137::Vector3f &pos,
-           bool cylinder, float p1, float p2) {
-    std::vector<std::shared_ptr<Object>> points =
-        !cylinder ? NewPointGrid(uPatches, vPatches, pos, p1, p2)
-                  : NewPointCylinder(uPatches, vPatches, pos, p1, p2);
-    std::shared_ptr<T> bezier = std::make_shared<T>(points, uPatches, vPatches);
-
-    return {bezier, points};
-  }
+  static std::vector<std::vector<std::shared_ptr<Object>>>
+  GetPointGrid(uint16_t uPatches, uint16_t vPatches,
+               const math137::Vector3f &pos, float w, float h, bool c0,
+               bool cylinder);
 
 private:
-  static std::vector<std::shared_ptr<Object>>
-  NewPointGrid(uint16_t uPatches, uint16_t vPatches,
-               const math137::Vector3f &pos, float w, float h);
-  static std::vector<std::shared_ptr<Object>>
-  NewPointCylinder(uint16_t uPatches, uint16_t vPatches,
-                   const math137::Vector3f &pos, float r, float h);
+  static std::vector<std::vector<std::shared_ptr<Object>>>
+  NewPointGridC0(uint16_t uPatches, uint16_t vPatches,
+                 const math137::Vector3f &pos, float w, float h);
+  static std::vector<std::vector<std::shared_ptr<Object>>>
+  NewPointCylinderC0(uint16_t uPatches, uint16_t vPatches,
+                     const math137::Vector3f &pos, float r, float h);
+  static std::vector<std::vector<std::shared_ptr<Object>>>
+  NewPointGridC2(uint16_t uPatches, uint16_t vPatches,
+                 const math137::Vector3f &pos, float w, float h);
+  static std::vector<std::vector<std::shared_ptr<Object>>>
+  NewPointCylinderC2(uint16_t uPatches, uint16_t vPatches,
+                     const math137::Vector3f &pos, float r, float h);
 };

@@ -1,6 +1,8 @@
 #version 460 core
 
 layout (isolines, fractional_even_spacing, ccw) in;
+out vec2 fuv;
+in vec2 euv[];
 
 uniform mat4 model;
 uniform mat4 view;
@@ -8,6 +10,10 @@ uniform mat4 projection;
 
 uniform uint u_subdivisions;
 uniform uint v_subdivisions;
+uniform uint uPatches;
+uniform uint vPatches;
+
+uniform bool reverse;
 
 vec3 p(uint up, uint vp) {
     return gl_in[up * 4 + vp].gl_Position.xyz;
@@ -42,4 +48,9 @@ void main(){
 
   vec3 pos = bezierSurf(u, v);
   gl_Position = projection * view * model * vec4(pos, 1.0f);
+
+  fuv = vec2(v / vPatches + euv[0].y, u / uPatches + euv[0].x);
+  if(reverse){
+    fuv = vec2(u / uPatches + euv[0].y, v / vPatches + euv[0].x);
+  }
 }

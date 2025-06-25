@@ -10,6 +10,8 @@ public:
 
   void render(std::shared_ptr<Renderer> &renderer,
               const math137::Vector4f &color) override;
+  void renderFramebuffer(std::shared_ptr<Renderer> &renderer,
+                         unsigned int id) override;
   bool renderObjectMenu() override;
   void notify() override { setVertices(); }
   math137::Vector3f getMassCenter() override;

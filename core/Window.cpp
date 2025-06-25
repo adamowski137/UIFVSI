@@ -166,8 +166,6 @@ Window::Window(uint16_t width, uint16_t height, std::string title)
                         GL_TRUE);
 
 #endif // 0
-  glStencilMask(0xff);
-  glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
   glfwSetWindowUserPointer(m_window.get(), reinterpret_cast<void *>(this));
   glfwSetScrollCallback(m_window.get(), scrollInputCallback);
   glfwSetKeyCallback(m_window.get(), keyInputCallback);
@@ -186,7 +184,7 @@ Window::Window(uint16_t width, uint16_t height, std::string title)
   glGenTextures(1, &m_state.textureId);
   glBindTexture(GL_TEXTURE_2D, m_state.textureId);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA,
-               GL_UNSIGNED_SHORT, nullptr);
+               GL_UNSIGNED_INT_8_8_8_8, nullptr);
 
   glGenFramebuffers(1, &m_state.fbo);
   glBindFramebuffer(GL_FRAMEBUFFER, m_state.fbo);
@@ -194,8 +192,7 @@ Window::Window(uint16_t width, uint16_t height, std::string title)
                          m_state.textureId, 0);
   glGenRenderbuffers(1, &m_state.rbo);
   glBindRenderbuffer(GL_RENDERBUFFER, m_state.rbo);
-  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8,
-                        m_state.getHeight(), m_state.getWidth());
+  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
   glBindRenderbuffer(GL_RENDERBUFFER, 0);
   glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT,
                             GL_RENDERBUFFER, m_state.rbo);
@@ -215,7 +212,7 @@ void Window::update(bool &running) {
 
   m_renderer->setView(m_camera.getView());
   m_manager->notifyQueue();
-  m_scene->renderToFramebuffer(m_renderer, m_manager, m_state);
+  m_scene->renderToFramebuffer(m_renderer, m_manager, m_camera, m_state);
   m_scene->render(m_renderer, m_manager, m_state);
 
   float t = glfwGetTime();
@@ -264,7 +261,9 @@ void Window::mouseButtonCallback(GLFWwindow *window, int button, int action,
 
 void Window::scrollInputCallback(GLFWwindow *window, double xOffset,
                                  double yOffset) {
-
+  ImGui_ImplGlfw_ScrollCallback(window, xOffset, yOffset);
+  if (ImGui::GetIO().WantCaptureMouse)
+    return;
   Window *w = reinterpret_cast<Window *>(glfwGetWindowUserPointer(window));
   w->m_camera.changeDistance(0.05f * yOffset);
 }
