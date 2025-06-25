@@ -10,6 +10,8 @@ uniform mat4 projection;
 uniform uint u_subdivisions;
 uniform uint v_subdivisions;
 uniform bool reverse;
+uniform uint uPatches;
+uniform uint vPatches;
 
 vec3 p(uint up, uint vp) {
     return gl_in[up * 4 + vp].gl_Position.xyz;
@@ -49,8 +51,8 @@ void main() {
     }
 
     gl_Position = projection * view * vec4(position, 1.0);
-    fuv = vec2(v, u);
-    if(reverse){
-      fuv = vec2(u, v);
-    }
+    fuv = vec2(u / uPatches + euv[0].y, v / vPatches + euv[0].x);
+  if(reverse){
+  fuv = vec2(v / vPatches + euv[0].y, u / uPatches + euv[0].x);
+  }
 }

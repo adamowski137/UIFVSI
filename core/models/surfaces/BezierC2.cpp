@@ -22,8 +22,8 @@ BezierC2::BezierC2(
 }
 
 void BezierC2::setVertices() {
-  float diffU = 1.f / (m_points.size() - 1);
-  float diffV = 1.f / (m_points[0].size() - 1);
+  float diffU = 1.f / (m_points.size() - 3);
+  float diffV = 1.f / (m_points[0].size() - 3);
   std::vector<float> points;
   for (uint16_t i = 0; i < m_points.size(); i++) {
     for (uint16_t j = 0; j < m_points[i].size(); j++) {
@@ -115,17 +115,24 @@ void BezierC2::renderFramebuffer(std::shared_ptr<Renderer> &renderer,
 void BezierC2::render(std::shared_ptr<Renderer> &renderer,
                       const math137::Vector4f &color) {
   glBindVertexArray(m_vao);
-  glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ebo);
   renderer->setShader(m_type);
   renderer->setModel(getModel());
   renderer->setColor(color);
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, m_trimmingTexture);
+  uint16_t ubPatches = m_points.size() - 3;
+  uint16_t vbPatches = m_points[0].size() - 3;
   if (m_type == ShaderType::SURFACEC2) {
+    renderer->reverseUV(false);
+    // renderer->setUVpatches(m_uPatches, m_vPatches);
+    renderer->setUVpatches(ubPatches, vbPatches);
     renderer->setUVSubdivisions(m_divisionsU, m_divisionsV);
     glPatchParameteri(GL_PATCH_VERTICES, 16);
     glDrawElements(GL_PATCHES, m_edges.size() / 2, GL_UNSIGNED_SHORT,
                    (void *)0);
     renderer->setUVSubdivisions(m_divisionsV, m_divisionsU);
+    renderer->setUVpatches(vbPatches, ubPatches);
+    renderer->reverseUV(true);
     glDrawElements(GL_PATCHES, m_edges.size() / 2, GL_UNSIGNED_SHORT,
                    (void *)(sizeof(uint16_t) * m_edges.size() / 2));
   }
