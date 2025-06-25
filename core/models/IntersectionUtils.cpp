@@ -182,7 +182,6 @@ IntersectionUtils::GradientDescent(const std::shared_ptr<Intersectable> &i1,
     gradient = newGradient;
   }
 
-  std::cout << DistanceSquared(i1, i2, x0) << std::endl;
   return x0;
 }
 
@@ -324,16 +323,15 @@ IntersectionUtils::Newton(const std::shared_ptr<Intersectable> &i1,
   int i = 0;
   float eps = 1e-5;
   float length;
-  math137::Vector4f nValue = Value(i1, i2, newSol, prevPoint, tangent, step);
+  math137::Vector4f nValue = {0,0,0,-step};
 
   do {
-    if (i++ > 10) {
+    if (i++ > 100) {
       // std::cout << "Iterations newton" << std::endl;
       break;
     }
     math137::Vector4f old = newSol;
     math137::Matrix4f jacobian = Jacobian(i1, i2, old, tangent);
-    math137::Vector4f val = Value(i1, i2, old, prevPoint, tangent, step);
     // std::optional<math137::Matrix4f> invJ =
     //     math137::MatrixUtils::Inverse(jacobian);
     // if (!invJ.has_value()) {
@@ -341,7 +339,7 @@ IntersectionUtils::Newton(const std::shared_ptr<Intersectable> &i1,
     //   return std::nullopt;
     // }
     // newSol = old - invJ.value() * val;
-    auto dx = math137::MatrixUtils::SolveLinearSystem(jacobian, val);
+    auto dx = math137::MatrixUtils::SolveLinearSystem(jacobian, nValue);
     if (!dx.has_value()) {
       std::cout << "Inverse" << std::endl;
       return std::nullopt;
@@ -356,7 +354,8 @@ IntersectionUtils::Newton(const std::shared_ptr<Intersectable> &i1,
     newSol.wrap(1.f);
     nValue = Value(i1, i2, newSol, prevPoint, tangent, step);
     length = nValue * nValue;
-  } while (nValue.any([](float v) { return fabsf(v) > 1e-5; }));
+  } while (nValue.any([eps](float v) { return fabsf(v) > eps; }));
+  //} while (length > eps);
 
   return newSol;
 }
@@ -375,11 +374,14 @@ std::optional<math137::Vector4f> IntersectionUtils::NextIntersectionPoint(
   n1.normalize();
   n2.normalize();
 
-  if ((n1 - n2) * (n1 - n2) < 1e-5)
+  if ((n1 - n2) * (n1 - n2) < 1e-6){
+    std::cout << "Newton normal vectors: " << (n1 - n2) * (n1 - n2) << std::endl;
     return std::nullopt;
+  }
 
   math137::Vector3f tangent =
       math137::Vector3f::Cross(n1, n2) * (dir ? 1.f : -1.f);
+      tangent.normalize();
   math137::Vector3f prevPoint = i1->getValue(prev.x(), prev.y());
   newSol = Newton(i1, i2, prev, prevPoint, tangent, step);
 
@@ -388,7 +390,7 @@ std::optional<math137::Vector4f> IntersectionUtils::NextIntersectionPoint(
 bool IntersectionUtils::CheckWrap(const math137::Vector4f &val,
                                   const std::array<bool, 4> &wrap) {
   for (uint16_t i = 0; i < 4; i++) {
-    if ((val[i] < 0 - 1e-5f || val[i] > 1 + 1e-5f) && !wrap[i])
+    if ((val[i] < 0 || val[i] > 1) && !wrap[i])
       return false;
   }
   return true;

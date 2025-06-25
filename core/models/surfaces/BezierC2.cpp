@@ -154,7 +154,7 @@ float BezierC2::dBSpline(int i, float t) const {
   case 1:
     return (0.5f * (3 * t * t - 4 * t));
   case 2:
-    return (0.5f * (-3 * t * t + 2 * t));
+    return (0.5f * (-3 * t * t + 2 * t + 1));
   case 3:
     return (0.5f * t * t);
   default:
@@ -192,7 +192,7 @@ math137::Vector3f BezierC2::uDerivative(float u, float v) const {
     for (uint16_t dv = 0; dv < 4; dv++) {
       local =
           local + m_points[uIndex + du][vIndex + dv].lock()->getTranslation() *
-                      dBSpline(du, nu) * BSpline(dv, nv);
+                      ubPatches * (dBSpline(du, nu) * BSpline(dv, nv));
     }
   }
   return local;
@@ -210,7 +210,7 @@ math137::Vector3f BezierC2::vDerivative(float u, float v) const {
     for (uint16_t dv = 0; dv < 4; dv++) {
       local =
           local + m_points[uIndex + du][vIndex + dv].lock()->getTranslation() *
-                      BSpline(du, nu) * dBSpline(dv, nv);
+                      vbPatches * (BSpline(du, nu) * dBSpline(dv, nv));
     }
   }
   return local;

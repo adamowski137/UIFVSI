@@ -422,8 +422,6 @@ void SceneManager::addIntersection(const std::shared_ptr<Intersectable> &i1,
                                       m_cursor.getTranslation(), i1, i2)
                                 : IntersectionUtils::FreeStart(i1, i2);
   math137::Vector4f found = IntersectionUtils::GradientDescent(i1, i2, start);
-  std::cout << i1->getValue(found.x(), found.y()) << std::endl;
-  std::cout << i2->getValue(found.z(), found.w()) << std::endl;
   m_cursor.setTranslation(i2->getValue(found.z(), found.w()));
   std::shared_ptr<IntersectionCurve> curve =
       std::make_shared<IntersectionCurve>(found, i1, i2, step);

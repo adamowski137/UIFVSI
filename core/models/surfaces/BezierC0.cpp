@@ -290,7 +290,7 @@ math137::Vector3f BezierC0::uDerivative(float u, float v) const {
       local =
           local +
           m_points[3 * uIndex + du][3 * vIndex + dv].lock()->getTranslation() *
-              dbernstein(du, nu) * bernstein(dv, nv);
+              m_uPatches * (dbernstein(du, nu) * bernstein(dv, nv));
     }
   }
   return local;
@@ -306,7 +306,7 @@ math137::Vector3f BezierC0::vDerivative(float u, float v) const {
       local =
           local +
           m_points[3 * uIndex + du][3 * vIndex + dv].lock()->getTranslation() *
-              bernstein(du, nu) * dbernstein(dv, nv);
+              m_vPatches * (bernstein(du, nu) * dbernstein(dv, nv));
     }
   }
   return local;

@@ -24,7 +24,7 @@ public:
     return m_points[0][0].lock() == m_points[0][m_points[0].size() - 3].lock();
   }
   virtual bool wrappableU() const override {
-    return m_points[0][0].lock() == m_points[m_points[0].size() - 3][0].lock();
+    return m_points[0][0].lock() == m_points[m_points.size() - 3][0].lock();
   }
 
 private:
