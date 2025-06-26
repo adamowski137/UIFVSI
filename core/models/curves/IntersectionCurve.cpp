@@ -123,10 +123,6 @@ void IntersectionCurve::setTextures() {
           midU2 = u2 + (midV2 - v2) * du / dv;
         }
 
-        std::cout << u1 << " " << v1 << " " << midU1 << " " << midV1
-                  << std::endl;
-        std::cout << u2 << " " << v2 << " " << midU2 << " " << midV2
-                  << std::endl;
         // Rysowanie dwóch linii (wrap)
         int y1 = std::clamp((int)(midU2 * m_height), 0, m_height - 1);
         int x1 = std::clamp((int)(midV2 * m_width), 0, m_width - 1);

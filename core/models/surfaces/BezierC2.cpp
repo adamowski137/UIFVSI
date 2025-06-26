@@ -125,13 +125,13 @@ void BezierC2::render(std::shared_ptr<Renderer> &renderer,
   if (m_type == ShaderType::SURFACEC2) {
     renderer->reverseUV(false);
     // renderer->setUVpatches(m_uPatches, m_vPatches);
-    renderer->setUVpatches(ubPatches, vbPatches);
+    renderer->setUVpatches(vbPatches, ubPatches);
     renderer->setUVSubdivisions(m_divisionsU, m_divisionsV);
     glPatchParameteri(GL_PATCH_VERTICES, 16);
     glDrawElements(GL_PATCHES, m_edges.size() / 2, GL_UNSIGNED_SHORT,
                    (void *)0);
     renderer->setUVSubdivisions(m_divisionsV, m_divisionsU);
-    renderer->setUVpatches(vbPatches, ubPatches);
+    renderer->setUVpatches(ubPatches, vbPatches);
     renderer->reverseUV(true);
     glDrawElements(GL_PATCHES, m_edges.size() / 2, GL_UNSIGNED_SHORT,
                    (void *)(sizeof(uint16_t) * m_edges.size() / 2));

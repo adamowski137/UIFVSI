@@ -323,28 +323,19 @@ IntersectionUtils::Newton(const std::shared_ptr<Intersectable> &i1,
   int i = 0;
   float eps = 1e-5;
   float length;
-  math137::Vector4f nValue = {0,0,0,-step};
+  math137::Vector4f nValue = {0, 0, 0, -step};
 
   do {
     if (i++ > 100) {
-      // std::cout << "Iterations newton" << std::endl;
       break;
     }
     math137::Vector4f old = newSol;
     math137::Matrix4f jacobian = Jacobian(i1, i2, old, tangent);
-    // std::optional<math137::Matrix4f> invJ =
-    //     math137::MatrixUtils::Inverse(jacobian);
-    // if (!invJ.has_value()) {
-    //   std::cout << "Inverse" << std::endl;
-    //   return std::nullopt;
-    // }
-    // newSol = old - invJ.value() * val;
     auto dx = math137::MatrixUtils::SolveLinearSystem(jacobian, nValue);
     if (!dx.has_value()) {
       std::cout << "Inverse" << std::endl;
       return std::nullopt;
     }
-    // float alpha = LineSearch(i1, i2, dx.value() * -1.f, old);
     newSol = old - dx.value();
 
     if (!CheckWrap(newSol, wrappable)) {
@@ -374,14 +365,15 @@ std::optional<math137::Vector4f> IntersectionUtils::NextIntersectionPoint(
   n1.normalize();
   n2.normalize();
 
-  if ((n1 - n2) * (n1 - n2) < 1e-6){
-    std::cout << "Newton normal vectors: " << (n1 - n2) * (n1 - n2) << std::endl;
+  if ((n1 - n2) * (n1 - n2) < 1e-6) {
+    std::cout << "Newton normal vectors: " << (n1 - n2) * (n1 - n2)
+              << std::endl;
     return std::nullopt;
   }
 
   math137::Vector3f tangent =
       math137::Vector3f::Cross(n1, n2) * (dir ? 1.f : -1.f);
-      tangent.normalize();
+  tangent.normalize();
   math137::Vector3f prevPoint = i1->getValue(prev.x(), prev.y());
   newSol = Newton(i1, i2, prev, prevPoint, tangent, step);
 
