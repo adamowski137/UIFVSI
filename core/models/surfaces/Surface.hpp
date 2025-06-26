@@ -10,6 +10,7 @@ class Surface : public Object {
 public:
   Surface(const std::vector<std::vector<std::shared_ptr<Object>>> &points,
           uint16_t uPatches, uint16_t vPatches, ShaderType type);
+  virtual ~Surface() {}
   bool renderObjectMenu() override;
 
 protected:

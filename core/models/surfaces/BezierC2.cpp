@@ -139,6 +139,7 @@ void BezierC2::render(std::shared_ptr<Renderer> &renderer,
   if (m_type == ShaderType::OBJECT) {
     glDrawElements(GL_LINES, m_edges.size(), GL_UNSIGNED_SHORT, (void *)0);
   }
+  glBindTexture(GL_TEXTURE_2D, 0);
 }
 float BezierC2::BSpline(int i, float t) const {
   switch (i) {

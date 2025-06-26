@@ -15,7 +15,7 @@
 #include <stdexcept>
 #include <string>
 
-#define DEBUG 1
+#define DEBUG 0
 
 GLenum glCheckError_(const char *file, int line) {
   GLenum errorCode;

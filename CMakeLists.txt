@@ -35,11 +35,12 @@ add_executable(${PROJECT_NAME}
   core/models/curves/IntersectionCurve.cpp
 )
 
-set(CMAKE_BUILD_TYPE Debug)
+#set(CMAKE_BUILD_TYPE Release)
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE INTERNAL "")
+set(CMAKE_CXX_FLAGS_DEBUG_INIT "-Wall")
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/math137)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/glew-cmake)
