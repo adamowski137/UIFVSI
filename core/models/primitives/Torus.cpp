@@ -16,7 +16,7 @@ Torus::Torus(float R, float r)
   glGenVertexArrays(1, &m_vao);
   glGenBuffers(1, &m_vbo);
   glGenBuffers(1, &m_ebo);
-  name = "Torus " + std::to_string(s_itemCount++);
+  name = "Torus " + std::to_string(m_id);
   glBindVertexArray(m_vao);
   glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)0);

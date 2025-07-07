@@ -18,7 +18,7 @@ IntersectionCurve::IntersectionCurve(const math137::Vector4f &start,
                                      float step)
     : m_step(step), m_intersectable1(i1), m_intersectable2(i2), m_start(start),
       Object(ShaderType::OBJECT) {
-  name = "Intersection " + std::to_string(s_itemCount++);
+  name = "Intersection " + std::to_string(m_id);
   glBindVertexArray(m_vao);
   glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);

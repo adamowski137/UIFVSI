@@ -54,6 +54,7 @@ std::string Serializer::Serialize(const std::shared_ptr<Point> &p) {
   std::stringstream ss;
   ss << "{\n";
   ss << "\"id\": " << p->m_id << ",\n";
+  ss << "\"name\": \"" << p->name << "\",\n";
   ss << "\"position\": " << Serialize(p->m_translation) << "\n";
   ss << "}\n";
   return ss.str();
@@ -64,6 +65,7 @@ std::string Serializer::Serialize(const std::shared_ptr<Torus> &t) {
   ss << "{\n";
   ss << "\"objectType\": \"torus\",\n";
   ss << "\"id\": " << t->m_id << ",\n";
+  ss << "\"name\": \"" << t->name << "\",\n";
   ss << "\"position\": " << Serialize(t->m_translation) << ",\n";
   ss << "\"rotation\": " << Serialize(t->m_rotation) << ",\n";
   ss << "\"scale\": " << Serialize(t->m_scale) << ",\n";
@@ -187,9 +189,15 @@ std::shared_ptr<Object> Serializer::DeserializePoint(
     const json &j, std::map<uint16_t, std::shared_ptr<Object>> &pointMap) {
   math137::Vector3f pos;
   uint16_t id;
+  std::string name;
   id = j["id"];
   pos = DeserializeVector(j["position"]);
-  auto obj = ObjectBuilder().withNewPoint().withPosition(pos).build();
+  name = j["name"];
+  auto obj = ObjectBuilder()
+      .withNewPoint()
+      .withPosition(pos)
+      .withName(name)
+      .build();
   pointMap[id] = obj;
   return obj;
 }
@@ -198,6 +206,9 @@ void Serializer::DeserializeSurfaceC0(
     const std::unique_ptr<SceneManager> &manager) {
   uint16_t uPoints, vPoints, m_uSubdivisions, m_vSubdivisions;
   std::vector<std::shared_ptr<Object>> points;
+  std::string name;
+
+  name = j["name"];
 
   uPoints = j["size"]["u"];
   vPoints = j["size"]["v"];
@@ -223,6 +234,7 @@ void Serializer::DeserializeSurfaceC0(
   }
 
   auto obj = std::make_shared<BezierC0>(transposed, uPatches, vPatches);
+  obj->name = name;
 
   manager->addObject(obj);
 
@@ -236,6 +248,9 @@ void Serializer::DeserializeSurfaceC2(
     const std::unique_ptr<SceneManager> &manager) {
   uint16_t uPoints, vPoints, m_uSubdivisions, m_vSubdivisions;
   std::vector<std::shared_ptr<Object>> points;
+  std::string name;
+
+  name = j["name"];
 
   uPoints = j["size"]["u"];
   vPoints = j["size"]["v"];
@@ -261,7 +276,7 @@ void Serializer::DeserializeSurfaceC2(
   }
 
   auto obj = std::make_shared<BezierC2>(transposed, uPatches, vPatches);
-
+  obj->name = name;
   manager->addObject(obj);
 
   for (const auto &p : points) {
@@ -275,7 +290,10 @@ void Serializer::DeserializeTorus(
   math137::Vector3f scale;
   math137::Quaternion quat;
   uint16_t alphaSamples, betaSamples;
-  float r, R;
+  float r, R; 
+  std::string name;
+
+  name = j["name"];
   pos = DeserializeVector(j["position"]);
   quat = DeserializeQuaternion(j["rotation"]);
   quat.normalize();
@@ -291,6 +309,7 @@ void Serializer::DeserializeTorus(
   t->m_translation = pos;
   t->m_rotation = quat;
   t->m_scale = scale;
+  t->name = name;
   t->setVertexData();
   t->recalculateModel();
 

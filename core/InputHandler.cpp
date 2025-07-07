@@ -5,6 +5,7 @@
 #include "Transformations.hpp"
 #include "Vector.hpp"
 #include "render/Shader.hpp"
+#include "serialize/Serializer.hpp"
 #include <GLFW/glfw3.h>
 #include <cstdint>
 #include <set>
@@ -38,7 +39,13 @@ void InputHandler::registerMouseMove(float x, float y) {
 void InputHandler::registerKeyPress(int key, int action) {
   KeyPressArgs kp{.key = key, .action = action};
   m_eventQueue.emplace(kp);
-  m_keyboard[key] = action == GLFW_PRESS;
+  m_keyboard[key] = (action == GLFW_PRESS);
+  if (action == GLFW_PRESS && key == GLFW_KEY_LEFT_CONTROL) {
+      std::cout << "klikniêto" << std::endl;
+  }
+  if (action == GLFW_RELEASE && key == GLFW_KEY_LEFT_CONTROL) {
+      std::cout << "puszczono" << std::endl;
+  }
 }
 
 void InputHandler::registerMouseScroll(float dx) {
@@ -127,7 +134,7 @@ void InputHandler::handleEvents(const std::unique_ptr<SceneManager> &manager,
         state.setMode(Mode::ROTATE);
       }
       if (action == GLFW_RELEASE && key == GLFW_KEY_S) {
-        state.setMode(Mode::SCALE);
+        m_keyboard[GLFW_KEY_LEFT_CONTROL] ? Serializer::SerializeToFile("export.json", manager) : state.setMode(Mode::SCALE);
       }
       if (action == GLFW_RELEASE && key == GLFW_KEY_O) {
         state.setTransformation(Transformation::OBJECT);

@@ -29,7 +29,6 @@ void SceneManager::notify(const std::weak_ptr<Object> &obj) {
   for (const auto &observer : m_observers[obj]) {
     m_notifyQueue.insert(observer);
   }
-  m_virtualObjects[obj].parent.lock();
 }
 void SceneManager::addObject(std::shared_ptr<Object> obj) {
   m_objects.push_back(obj);

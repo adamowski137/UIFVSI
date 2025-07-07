@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.30)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(uifvsi)
@@ -41,12 +41,27 @@ set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE INTERNAL "")
 set(CMAKE_CXX_FLAGS_DEBUG_INIT "-Wall")
+add_compile_definitions(_USE_MATH_DEFINES)
+
+set(SHADERS_DIR "${CMAKE_SOURCE_DIR}/shaders")
+set(SHADERS_OUTPUT_DIR "${CMAKE_BINARY_DIR}")
+
+# Copy all shader files whenever the build is run
+add_custom_command(
+    OUTPUT ${SHADERS_OUTPUT_DIR}
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${SHADERS_DIR} ${SHADERS_OUTPUT_DIR}
+    COMMENT "Copying shaders to build directory"
+)
+
+# Custom target to trigger the command
+add_custom_target(copy_shaders ALL DEPENDS ${SHADERS_OUTPUT_DIR})
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/math137)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/glew-cmake)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/glfw)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/ImGuiFileDialog)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/json)
+
 
 find_package(OpenGL REQUIRED)
 
@@ -67,7 +82,7 @@ target_include_directories(imgui PUBLIC
 target_include_directories(math137 PUBLIC external/math137/include)
 target_link_libraries(imgui PRIVATE glfw OpenGL::GL)
 target_link_libraries(ImGuiFileDialog PRIVATE imgui)
-target_link_libraries(${PROJECT_NAME} PUBLIC 
+target_link_libraries(${PROJECT_NAME} PRIVATE 
   imgui 
   math137 
   libglew_static 

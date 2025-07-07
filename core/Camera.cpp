@@ -1,3 +1,5 @@
+#define _USE_MATH_DEFINES
+
 #include "Camera.hpp"
 #include "Matrix.hpp"
 #include "MatrixUtils.hpp"

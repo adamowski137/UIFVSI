@@ -10,7 +10,7 @@
 #include <vector>
 
 Point::Point() : Object(ShaderType::POINT) {
-  name = "Point " + std::to_string(s_itemCount++);
+  name = "Point " + std::to_string(m_id);
   glBindVertexArray(m_vao);
   glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);

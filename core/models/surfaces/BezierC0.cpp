@@ -13,7 +13,7 @@ BezierC0::BezierC0(
     const std::vector<std::vector<std::shared_ptr<Object>>> &points,
     uint16_t uPatches, uint16_t vPatches)
     : Surface(points, uPatches, vPatches, ShaderType::SURFACE) {
-  name = "BezierSurfaceC0 " + std::to_string(s_itemCount++);
+  name = "BezierSurfaceC0 " + std::to_string(m_id);
   glBindVertexArray(m_vao);
   glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)0);

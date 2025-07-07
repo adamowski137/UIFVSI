@@ -1,5 +1,5 @@
+#define _USE_MATH_DEFINES
 #pragma once
-
 #include "Matrix.hpp"
 #include <cmath>
 #include <cstdint>
@@ -11,6 +11,12 @@ enum class DisplayMode { DEFAULT, STEREO };
 
 class State {
 public:
+	State()
+		: m_mode(Mode::DEFAULT), m_displayMode(DisplayMode::DEFAULT),
+		m_transformation(Transformation::OBJECT), m_width(0),
+		m_height(0), rbo(0), fbo(0), textureId(0){
+	}
+
   inline void setMode(Mode m) { m_mode = m; }
   inline void setDisplayMode(DisplayMode m) { m_displayMode = m; }
   inline void setTransformation(Transformation t) { m_transformation = t; }

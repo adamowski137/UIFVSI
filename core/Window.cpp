@@ -133,7 +133,7 @@ void APIENTRY glDebugOutput(GLenum source, GLenum type, unsigned int id,
 #define glCheckError() glCheckError_(__FILE__, __LINE__)
 
 Window::Window(uint16_t width, uint16_t height, std::string title)
-    : m_camera(1.f, {0.0f, 0.0f, 0.0f}) {
+    : m_camera(1.f, {0.0f, 0.0f, 0.0f}), m_t(0.f) {
   m_state.setDimensions(width, height);
   glfwInit();
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
@@ -175,12 +175,14 @@ Window::Window(uint16_t width, uint16_t height, std::string title)
   m_renderer = std::make_shared<Renderer>();
   m_scene = std::make_unique<Scene>();
   m_manager = std::make_unique<SceneManager>();
-  m_renderer->setProjection(math137::MatrixUtils::Projection(
-      m_state.m_fov, (float)width / (float)height, m_state.m_near,
-      m_state.m_far));
+  m_state.setProjection(
+	  math137::MatrixUtils::Projection(m_state.m_fov, (float)width / height,
+		  m_state.m_near, m_state.m_far));
+  m_renderer->setProjection(m_state.getProjection());
   m_manager->setInvProjection(math137::MatrixUtils::InvProjection(
       m_state.m_fov, (float)width / (float)height, m_state.m_near,
       m_state.m_far));
+  m_renderer->setView(m_camera.getView());
   glGenTextures(1, &m_state.textureId);
   glBindTexture(GL_TEXTURE_2D, m_state.textureId);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA,
@@ -197,6 +199,7 @@ Window::Window(uint16_t width, uint16_t height, std::string title)
   glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT,
                             GL_RENDERBUFFER, m_state.rbo);
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 Window::~Window() {

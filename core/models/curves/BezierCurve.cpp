@@ -8,7 +8,7 @@
 
 BezierCurve::BezierCurve(const std::vector<std::weak_ptr<Object>> &points)
     : Curve(points) {
-  name = "BezierCurve " + std::to_string(s_itemCount++);
+  name = "BezierCurve " + std::to_string(m_id);
   glBindVertexArray(m_vao);
   glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);

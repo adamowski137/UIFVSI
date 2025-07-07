@@ -38,19 +38,19 @@ void Intersectable::setTrimmingTexture(const std::vector<uint8_t> &v,
     y = (y + m_height) % m_height;
 
     m_trimmingData[y * m_width + x] = 255;
-    if (m_trimmingData[y * m_width + x - 1] == 0) {
+    if (x > 0 &&  m_trimmingData[y * m_width + x - 1] == 0) {
       s.push({x - 1, y});
       m_trimmingData[y * m_width + x - 1] = 255;
     }
-    if (m_trimmingData[y * m_width + x + 1] == 0) {
+    if (x < m_width - 1 && m_trimmingData[y * m_width + x + 1] == 0) {
       s.push({x + 1, y});
       m_trimmingData[y * m_width + x + 1] = 255;
     }
-    if (m_trimmingData[(y - 1) * m_width + x] == 0) {
+    if (y > 0 && m_trimmingData[(y - 1) * m_width + x] == 0) {
       s.push({x, y - 1});
       m_trimmingData[(y - 1) * m_width + x] = 255;
     }
-    if (m_trimmingData[(y + 1) * m_width + x] == 0) {
+    if (y < m_height - 1 && m_trimmingData[(y + 1) * m_width + x] == 0) {
       s.push({x, y + 1});
       m_trimmingData[(y + 1) * m_width + x] = 255;
     }

@@ -44,6 +44,10 @@ struct InputEvent {
 
 class InputHandler {
 public:
+	InputHandler() : m_startMouse(0.0f, 0.0f), m_prevMouse(0.0f, 0.0f),
+		m_leftMouse(false), m_rightMouse(false) {
+		m_keyboard.fill(false);
+	}
   void registerMouseClick(int key, int action, float x, float y);
   void registerMouseMove(float dx, float dy);
   void registerKeyPress(int key, int action);
@@ -56,7 +60,6 @@ private:
   float project(float x, float y);
   std::queue<InputEvent> m_eventQueue;
 
-  void handleMouseClick();
   math137::Vector2f m_startMouse;
   math137::Vector2f m_prevMouse;
   bool m_leftMouse;

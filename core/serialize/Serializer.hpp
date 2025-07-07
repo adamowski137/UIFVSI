@@ -49,13 +49,15 @@ private:
   DeserializeCurve(const json &j,
                    const std::map<uint16_t, std::shared_ptr<Object>> pointMap,
                    const std::unique_ptr<SceneManager> &manager) {
+    std::string name;
+	name = j["name"];
     std::vector<std::weak_ptr<Object>> points;
     for (const auto &p : j["controlPoints"]) {
       points.push_back(pointMap.at(p["id"]));
     }
 
     auto obj = std::make_shared<T>(points);
-
+    obj->name = name;
     manager->addObject(obj);
 
     for (const auto &p : points) {

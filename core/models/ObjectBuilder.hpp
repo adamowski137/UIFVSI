@@ -19,6 +19,7 @@ public:
   ObjectBuilder &withPosition(const math137::Vector3f &pos);
   ObjectBuilder &withRotation(const math137::Quaternion &rot);
   ObjectBuilder &withScale(const math137::Vector3f &scale);
+  ObjectBuilder& withName(const std::string& name);
   ObjectBuilder &withId(const uint16_t val);
   std::shared_ptr<Object> build();
 

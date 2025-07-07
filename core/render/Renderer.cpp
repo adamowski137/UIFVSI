@@ -4,17 +4,18 @@
 #include <cstdint>
 
 Renderer::Renderer()
-    : m_objectShader("../shaders/base.vs", "../shaders/base.fs"),
-      m_pointShader("../shaders/point.vs", "../shaders/base.fs"),
-      m_curveShader("../shaders/bernstein.vs", "../shaders/base.fs",
-                    "../shaders/bernstein.tes", "../shaders/bernstein.eval"),
-      m_surfaceC2Shader("../shaders/surface.vs", "../shaders/base.fs",
-                        "../shaders/surface.tes", "../shaders/surfaceC2.eval"),
-      m_gregoryShader("../shaders/gregory.vs", "../shaders/base.fs",
-                      "../shaders/gregory.tes", "../shaders/gregory.eval"),
-      m_surfaceShader("../shaders/surface.vs", "../shaders/base.fs",
-                      "../shaders/surface.tes", "../shaders/surface.eval") {
+    : m_objectShader("base.vs", "base.fs"),
+      m_pointShader("point.vs", "base.fs"),
+      m_curveShader("bernstein.vs", "base.fs",
+                    "bernstein.tes", "bernstein.eval"),
+      m_surfaceC2Shader("surface.vs", "base.fs",
+                        "surface.tes", "surfaceC2.eval"),
+      m_gregoryShader("gregory.vs", "base.fs",
+                      "gregory.tes", "gregory.eval"),
+      m_surfaceShader("surface.vs", "base.fs",
+                      "surface.tes", "surface.eval") {
   m_selectedShader = &m_objectShader;
+  m_type = ShaderType::OBJECT;
   m_selectedShader->use();
 }
 

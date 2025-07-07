@@ -55,6 +55,11 @@ ObjectBuilder &ObjectBuilder::withScale(const math137::Vector3f &scale) {
   return *this;
 }
 
+ObjectBuilder& ObjectBuilder::withName(const std::string& name){
+  m_object->name = name;
+  return *this;
+}
+
 ObjectBuilder &ObjectBuilder::withId(const uint16_t val) {
   m_object->m_id = val;
   if (Object::s_itemCount < val)
