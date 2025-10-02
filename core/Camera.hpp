@@ -29,7 +29,7 @@ public:
 
   inline void changeDistance(float dx) {
     m_distance += dx;
-    static const float eps = 0.01f;
+    constexpr float eps = 0.01f;
     if (m_distance < eps)
       m_distance = eps;
     recalculateView();

@@ -21,10 +21,10 @@ IntersectionUtils::FreeStart(const std::shared_ptr<Intersectable> &i1,
   float minDist = std::numeric_limits<float>::max();
   for (uint16_t u = 1; u < divisons; u++) {
     for (uint16_t v = 1; v < divisons; v++) {
-      for (uint16_t u1 = 1; u1 < divisons; u1++) {
-        for (uint16_t v1 = 1; v1 < divisons; v1++) {
+      for (uint16_t uu = 1; uu < divisons; uu++) {
+        for (uint16_t vv = 1; vv < divisons; vv++) {
           math137::Vector4f x{u / (float)(divisons), v / (float)(divisons),
-                              u1 / (float)divisons, v1 / (float)divisons};
+                              uu / (float)divisons, vv / (float)divisons};
           float val = DistanceSquared(i1, i2, x);
           if (selfCross) {
             math137::Vector4f grad = Gradient(i1, i2, x);
@@ -163,8 +163,6 @@ IntersectionUtils::GradientDescent(const std::shared_ptr<Intersectable> &i1,
   math137::Vector4f gradient = Gradient(i1, i2, x0);
   math137::Vector4f d = {-gradient.x(), -gradient.y(), -gradient.z(),
                          -gradient.w()};
-  std::array<bool, 4> wrappable = {i1->wrappableU(), i1->wrappableV(),
-                                   i2->wrappableU(), i2->wrappableV()};
 
   for (uint16_t i = 0; i < maxIterations; i++) {
     float dist = DistanceSquared(i1, i2, x0);
@@ -242,10 +240,8 @@ float IntersectionUtils::LineSearch(const std::shared_ptr<Intersectable> &i1,
                                     const std::shared_ptr<Intersectable> &i2,
                                     const math137::Vector4f &d,
                                     const math137::Vector4f &x0) {
-  float best = 0.0f;
   std::array<bool, 4> wrappable = {i1->wrappableU(), i1->wrappableV(),
                                    i2->wrappableU(), i2->wrappableV()};
-  float minF = std::numeric_limits<float>::max();
   float r = AlphaRange(i1, i2, x0, d, wrappable);
   float l = 0.f;
   float length = 1;
@@ -322,7 +318,6 @@ IntersectionUtils::Newton(const std::shared_ptr<Intersectable> &i1,
                                    i2->wrappableU(), i2->wrappableV()};
   int i = 0;
   float eps = 1e-5;
-  float length;
   math137::Vector4f nValue = {0, 0, 0, -step};
 
   do {
@@ -344,9 +339,7 @@ IntersectionUtils::Newton(const std::shared_ptr<Intersectable> &i1,
     }
     newSol.wrap(1.f);
     nValue = Value(i1, i2, newSol, prevPoint, tangent, step);
-    length = nValue * nValue;
   } while (nValue.any([eps](float v) { return fabsf(v) > eps; }));
-  //} while (length > eps);
 
   return newSol;
 }

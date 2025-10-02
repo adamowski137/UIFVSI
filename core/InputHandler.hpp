@@ -10,6 +10,7 @@
 #include <queue>
 
 enum class EventType { NOACTION, MOVE, MOUSE_CLICK, KEY_PRESS, SCROLL };
+
 struct MoveArgs {
   math137::Vector2f end;
   math137::Vector2f start;
@@ -28,26 +29,41 @@ struct ScrollArgs {
   float dx;
 };
 
-struct InputEvent {
-  InputEvent() { memset(this, 0, sizeof(*this)); }
-  InputEvent(MoveArgs mv) : type(EventType::MOVE), move(mv) {}
-  InputEvent(MouseClickArgs mv)
-      : type(EventType::MOUSE_CLICK), mouseClick(mv) {}
-  InputEvent(KeyPressArgs mv) : type(EventType::KEY_PRESS), keyPress(mv) {}
-  InputEvent(ScrollArgs mv) : type(EventType::SCROLL), scroll(mv) {}
-  EventType type;
+union InputArgs {
+	InputArgs() { memset(this, 0, sizeof(*this)); }
+	InputArgs(MoveArgs mv) { memset(this, 0, sizeof(*this)); move = mv; }
+	InputArgs(MouseClickArgs mv) { memset(this, 0, sizeof(*this)); mouseClick = mv; }
+	InputArgs(KeyPressArgs mv) { memset(this, 0, sizeof(*this)); keyPress = mv; }
+	InputArgs(ScrollArgs mv) { memset(this, 0, sizeof(*this)); scroll = mv; }
+
   MoveArgs move;
   MouseClickArgs mouseClick;
   KeyPressArgs keyPress;
   ScrollArgs scroll;
 };
 
+struct InputEvent {
+  InputEvent() { memset(this, 0, sizeof(*this)); }
+  InputEvent(MoveArgs mv)
+      : type(EventType::MOVE), args(std::make_unique<InputArgs>(mv)) {}
+  InputEvent(MouseClickArgs mv)
+      : type(EventType::MOUSE_CLICK), args(std::make_unique<InputArgs>(mv)) {}
+  InputEvent(KeyPressArgs mv) : type(EventType::KEY_PRESS), args(std::make_unique<InputArgs>(mv)) {}
+  InputEvent(ScrollArgs mv) : type(EventType::SCROLL), args(std::make_unique<InputArgs>(mv)) {}
+  std::unique_ptr<InputArgs> args;
+  EventType type;
+};
+
+
 class InputHandler {
 public:
-	InputHandler() : m_startMouse(0.0f, 0.0f), m_prevMouse(0.0f, 0.0f),
-		m_leftMouse(false), m_rightMouse(false) {
-		m_keyboard.fill(false);
-	}
+  InputHandler() : m_startMouse(0.0f, 0.0f), m_prevMouse(0.0f, 0.0f),
+    m_leftMouse(false), m_rightMouse(false), m_keyboard() {
+	  m_keyboard.fill(false);
+  }
+  InputHandler(const InputHandler&) = delete;
+  ~InputHandler() = default;
+
   void registerMouseClick(int key, int action, float x, float y);
   void registerMouseMove(float dx, float dy);
   void registerKeyPress(int key, int action);

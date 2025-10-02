@@ -37,15 +37,10 @@ void InputHandler::registerMouseMove(float x, float y) {
 }
 
 void InputHandler::registerKeyPress(int key, int action) {
+  if (action == GLFW_REPEAT) return;
   KeyPressArgs kp{.key = key, .action = action};
   m_eventQueue.emplace(kp);
   m_keyboard[key] = (action == GLFW_PRESS);
-  if (action == GLFW_PRESS && key == GLFW_KEY_LEFT_CONTROL) {
-      std::cout << "klikniêto" << std::endl;
-  }
-  if (action == GLFW_RELEASE && key == GLFW_KEY_LEFT_CONTROL) {
-      std::cout << "puszczono" << std::endl;
-  }
 }
 
 void InputHandler::registerMouseScroll(float dx) {
@@ -65,13 +60,13 @@ float InputHandler::project(float x, float y) {
 void InputHandler::handleEvents(const std::unique_ptr<SceneManager> &manager,
                                 State &state, Camera &camera, float dt) {
   while (!m_eventQueue.empty()) {
-    InputEvent event = m_eventQueue.front();
+    InputEvent event = std::move(m_eventQueue.front());
     m_eventQueue.pop();
 
     switch (event.type) {
     case EventType::MOVE: {
-      math137::Vector2f end = event.move.end;
-      math137::Vector2f start = event.move.start;
+      math137::Vector2f end = event.args->move.end;
+      math137::Vector2f start = event.args->move.start;
       math137::Vector2f positonChange = end - start;
       if (positonChange * positonChange < 1e-6)
         break;
@@ -114,13 +109,14 @@ void InputHandler::handleEvents(const std::unique_ptr<SceneManager> &manager,
       }
       break;
     }
+
     case EventType::SCROLL: {
-      camera.changeDistance(-event.scroll.dx);
+      camera.changeDistance(-event.args->scroll.dx);
       break;
     }
     case EventType::KEY_PRESS: {
-      int key = event.keyPress.key;
-      int action = event.keyPress.action;
+      int key = event.args->keyPress.key;
+      int action = event.args->keyPress.action;
       if (action == GLFW_RELEASE && key == GLFW_KEY_D) {
         state.setMode(Mode::DEFAULT);
       }
@@ -169,11 +165,12 @@ void InputHandler::handleEvents(const std::unique_ptr<SceneManager> &manager,
 
       break;
     }
+
     case EventType::MOUSE_CLICK: {
-      int key = event.mouseClick.key;
-      int action = event.mouseClick.action;
-      math137::Vector2f start = event.mouseClick.start;
-      math137::Vector2f end = event.mouseClick.end;
+      int key = event.args->mouseClick.key;
+      int action = event.args->mouseClick.action;
+      math137::Vector2f start = event.args->mouseClick.start;
+      math137::Vector2f end = event.args->mouseClick.end;
       if (action == GLFW_RELEASE && key == GLFW_MOUSE_BUTTON_RIGHT) {
         float ndcsx = (2 * end.x()) / (state.getWidth() - 1) - 1.f;
         float ndcsy = 1.f - (2 * end.y()) / (state.getHeight() - 1);
@@ -208,6 +205,7 @@ void InputHandler::handleEvents(const std::unique_ptr<SceneManager> &manager,
       }
       break;
     }
+
     default:
       break;
     }

@@ -96,8 +96,8 @@ std::string Serializer::Serialize(const std::shared_ptr<Curve> &curve) {
 
 std::string Serializer::Serialize(const std::shared_ptr<Surface> &surface) {
   std::vector<std::string> references;
-  uint16_t uPoints = 4 + (surface->m_uPatches - 1) * 3;
-  uint16_t vPoints = 4 + (surface->m_vPatches - 1) * 3;
+  uint16_t uPoints = surface->m_points.size();
+  uint16_t vPoints = surface->m_points[0].size();
   for (uint16_t v = 0; v < vPoints; v++)
     for (uint16_t u = 0; u < uPoints; u++)
       references.push_back(

@@ -268,7 +268,7 @@ void Window::scrollInputCallback(GLFWwindow *window, double xOffset,
   if (ImGui::GetIO().WantCaptureMouse)
     return;
   Window *w = reinterpret_cast<Window *>(glfwGetWindowUserPointer(window));
-  w->m_camera.changeDistance(0.05f * yOffset);
+  w->m_camera.changeDistance(0.08f * yOffset);
 }
 void Window::resizeWindowCallback(GLFWwindow *window, int width, int height) {
 
