@@ -12,6 +12,8 @@ add_executable(${PROJECT_NAME}
   core/Scene.cpp
   core/SceneManager.cpp
   core/Transformations.cpp
+  core/paths/PathGenerator.cpp
+  core/paths/Config.cpp
   core/render/Shader.cpp
   core/render/Renderer.cpp
   core/models/primitives/Torus.cpp
@@ -29,6 +31,7 @@ add_executable(${PROJECT_NAME}
   core/models/surfaces/Surface.cpp
   core/models/surfaces/SurfaceBuilder.cpp
   core/serialize/Serializer.cpp
+  core/serialize/Parser.cpp
   core/models/surfaces/Gregory.cpp
   core/models/IntersectionUtils.cpp
   core/models/Intersectable.cpp
@@ -90,4 +93,12 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
   glfw 
   ImGuiFileDialog 
   nlohmann_json::nlohmann_json
+)
+
+# Ensure shaders are copied next to the executable (runtime folder) after the target builds.
+# This uses the generator expression $<TARGET_FILE_DIR:...> so it works with multi-config generators
+# (e.g. Visual Studio Debug/Release folders).
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${SHADERS_DIR}" "$<TARGET_FILE_DIR:${PROJECT_NAME}>"
+    COMMENT "Copying shaders to runtime folder"
 )

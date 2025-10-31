@@ -18,7 +18,8 @@
 #include <memory>
 #include <string>
 #include <vector>
-
+#include "paths/PathGenerator.hpp"
+#include "serialize/Parser.hpp"
 class SceneManager;
 
 Scene::Scene() {}
@@ -182,7 +183,16 @@ void Scene::renderMenu(std::unique_ptr<SceneManager> &manager, State &state) {
     else
       state.setDisplayMode(DisplayMode::DEFAULT);
   }
-
+  if(ImGui::Button("Generate Path")) {
+    auto path = PathGenerator().generatePath(manager);
+    std::ofstream file("C:/Users/adam/Desktop/projekty/mill-simulator/paths/7.k16");
+    Parser::parseMovesToFile(path, file);
+    file.close();
+    file.open("C:/Users/adam/Desktop/projekty/mill-simulator/paths/8.k8");
+    auto ballPath = PathGenerator().generateBallPath(manager);
+    Parser::parseMovesToFile(ballPath, file);
+    file.close();
+  }
   if (ImGuiFileDialog::Instance()->Display("ExportFile")) {
     if (ImGuiFileDialog::Instance()->IsOk()) {
       std::string filePath = ImGuiFileDialog::Instance()->GetFilePathName();

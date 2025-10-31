@@ -1,4 +1,3 @@
-#define _USE_MATH_DEFINES
 #include "SurfaceBuilder.hpp"
 #include "../ObjectBuilder.hpp"
 #include "Vector.hpp"

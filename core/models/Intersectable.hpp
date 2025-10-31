@@ -13,6 +13,7 @@ public:
   math137::Vector3f virtual getValue(float u, float v) const = 0;
   void setTrimmingTexture(const std::vector<uint8_t> &data, uint16_t x,
                           uint16_t y);
+  bool isTrimmedUV(float u, float v) const;
 
 protected:
   uint32_t m_trimmingTexture;

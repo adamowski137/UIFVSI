@@ -61,3 +61,23 @@ void Intersectable::setTrimmingTexture(const std::vector<uint8_t> &v,
                   GL_UNSIGNED_BYTE, m_trimmingData.data());
   glBindTexture(GL_TEXTURE_2D, 0);
 }
+
+bool Intersectable::isTrimmedUV(float u, float v) const {
+  int x = static_cast<int>(v * m_width);
+  int y = static_cast<int>(u * m_height);
+
+  if (!wrappableU()) {
+    if (y < 0) y = 0;
+    if (y >= (int)m_height) y = (int)m_height - 1;
+  } else {
+    y = (y % (int)m_height + (int)m_height) % (int)m_height;
+  }
+  if (!wrappableV()) {
+    if (x < 0) x = 0;
+    if (x >= (int)m_width) x = (int)m_width - 1;
+  } else {
+    x = (x % (int)m_width + (int)m_width) % (int)m_width;
+  }
+
+  return m_trimmingData[y * m_width + x] != 0;
+}
