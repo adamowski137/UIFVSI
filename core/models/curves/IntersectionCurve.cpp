@@ -233,9 +233,20 @@ bool IntersectionCurve::renderObjectMenu() {
     }
 
     ImGui::InputInt2("Pixel ", pos);
-    if (ImGui::Button("Trim 1"))
-      m_intersectable1.lock()->setTrimmingTexture(m_textureData[0], pos[0],
-                                                  pos[1]);
+    if (ImGui::Button("Union Trim 1")) {
+      if (auto s = m_intersectable1.lock())
+        s->unionTrimmingTexture(m_textureData[0], pos[0], pos[1]);
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Intersect Trim 1")) {
+      if (auto s = m_intersectable1.lock())
+        s->intersectTrimmingTexture(m_textureData[0], pos[0], pos[1]);
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Reset trimming")) {
+      if (auto s = m_intersectable1.lock())
+        s->resetTrimming();
+    }
 
     ImGui::End();
   }
@@ -258,9 +269,20 @@ bool IntersectionCurve::renderObjectMenu() {
     }
 
     ImGui::InputInt2("Pixel ", pos);
-    if (ImGui::Button("Trim 2"))
-      m_intersectable2.lock()->setTrimmingTexture(m_textureData[1], pos[0],
-                                                  pos[1]);
+    if (ImGui::Button("Union Trim 2")) {
+      if (auto s = m_intersectable2.lock())
+        s->unionTrimmingTexture(m_textureData[1], pos[0], pos[1]);
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Intersect Trim 2")) {
+      if (auto s = m_intersectable2.lock())
+        s->intersectTrimmingTexture(m_textureData[1], pos[0], pos[1]);
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Reset trimming")) {
+      if (auto s = m_intersectable2.lock())
+        s->resetTrimming();
+    }
     ImGui::End();
   }
   return false;

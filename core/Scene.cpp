@@ -185,10 +185,10 @@ void Scene::renderMenu(std::unique_ptr<SceneManager> &manager, State &state) {
   }
   if(ImGui::Button("Generate Path")) {
     auto path = PathGenerator().generatePath(manager);
-    std::ofstream file("C:/Users/adam/Desktop/projekty/mill-simulator/paths/7.k16");
+    std::ofstream file("/home/adamowski137/Desktop/projekty/mill-simulator/paths/7.k16");
     Parser::parseMovesToFile(path, file);
     file.close();
-    file.open("C:/Users/adam/Desktop/projekty/mill-simulator/paths/8.k8");
+    file.open("/home/adamowski137/Desktop/projekty/mill-simulator/paths/8.k08");
     auto ballPath = PathGenerator().generateBallPath(manager);
     Parser::parseMovesToFile(ballPath, file);
     file.close();

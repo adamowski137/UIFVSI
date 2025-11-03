@@ -11,8 +11,12 @@ public:
   math137::Vector3f virtual uDerivative(float u, float v) const = 0;
   math137::Vector3f virtual vDerivative(float u, float v) const = 0;
   math137::Vector3f virtual getValue(float u, float v) const = 0;
-  void setTrimmingTexture(const std::vector<uint8_t> &data, uint16_t x,
+  void intersectTrimmingTexture(const std::vector<uint8_t> &data, uint16_t x,
                           uint16_t y);
+  // Merge incoming trimming mask with existing mask using union (OR).
+  void unionTrimmingTexture(const std::vector<uint8_t> &data, uint16_t x,
+                            uint16_t y);
+  void resetTrimming();
   bool isTrimmedUV(float u, float v) const;
 
 protected:
