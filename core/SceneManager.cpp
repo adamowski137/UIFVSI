@@ -424,6 +424,8 @@ void SceneManager::addIntersection(const std::shared_ptr<Intersectable> &i1,
   m_cursor.setTranslation(i2->getValue(found.z(), found.w()));
   std::shared_ptr<IntersectionCurve> curve =
       std::make_shared<IntersectionCurve>(found, i1, i2, step);
+  if(curve->getPointCount() < 10)
+      return;
   addObject(curve);
 }
 

@@ -355,6 +355,12 @@ std::optional<math137::Vector4f> IntersectionUtils::NextIntersectionPoint(
   math137::Vector3f df2dv = i2->vDerivative(prev.z(), prev.w());
   math137::Vector3f n1 = math137::Vector3f::Cross(df1du, df1dv);
   math137::Vector3f n2 = math137::Vector3f::Cross(df2du, df2dv);
+
+  if(n1 * n1 < 1e-9 || n2 * n2 < 1e-9) {
+    std::cout << "Degenerate normal vector" << std::endl;
+    return std::nullopt;
+  }
+
   n1.normalize();
   n2.normalize();
 
@@ -400,7 +406,7 @@ IntersectionUtils::GenerateIntersectionPoints(
   math137::Vector3f difference;
 
   do {
-    if (i++ > 10000)
+    if (i++ > 40000)
       break;
     startOpt = NextIntersectionPoint(i1, i2, start, step, dir);
     if (!startOpt.has_value()) {
@@ -418,6 +424,10 @@ IntersectionUtils::GenerateIntersectionPoints(
     difference = startPos - i1->getValue(start.x(), start.y());
     if (i > 5 && difference * difference < step * step)
       return {true, res};
+    if(start.any([](float v) { return std::isnan(v); })) {
+      std::cout << "NaN value outer" << std::endl;
+      return {false, res};
+    }
   } while (true);
   //} while (sqrtf(difference * difference) > step / 2);
   return {false, res};

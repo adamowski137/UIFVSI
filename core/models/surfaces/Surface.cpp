@@ -1,6 +1,9 @@
 #include "Surface.hpp"
 #include "Vector.hpp"
 #include "imgui.h"
+#include "BezierC2.hpp"
+#include "BezierC0.hpp"
+#include "../Intersectable.hpp"
 #include <cstdint>
 #include <memory>
 #include <sys/types.h>
@@ -63,3 +66,4 @@ void Surface::replacePoint(const std::weak_ptr<Object> &current,
     }
   }
 }
+

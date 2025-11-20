@@ -20,7 +20,9 @@ public:
                          unsigned int id) override;
   bool renderObjectMenu() override;
   std::vector<math137::Vector3f> getPoints() const;
-
+  size_t getPointCount() const { return m_params.size(); }
+  void unionTrimmingTexture(uint16_t x, uint16_t y, uint8_t surfaceIndex);
+  void intersectTrimmingTexture(uint16_t x, uint16_t y, uint8_t surfaceIndex);
 private:
   void setVertices();
   void setTextures();
@@ -32,7 +34,6 @@ private:
   const uint16_t m_height = 512;
   GLuint m_textureIds[2];
   bool m_openPopup[2];
-  std::vector<uint8_t> m_textureData[2];
   float m_step;
   std::weak_ptr<Intersectable> m_intersectable1;
   std::weak_ptr<Intersectable> m_intersectable2;

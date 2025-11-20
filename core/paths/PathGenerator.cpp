@@ -4,27 +4,37 @@
 #include <algorithm>
 #include <utility>
 #include <cmath>
-PathGenerator::PathGenerator() {}
+#include <execution>
+#include "../models/curves/IntersectionCurve.hpp"
+PathGenerator::PathGenerator() : m_groundSurface(std::make_shared<FlatSurface>(
+                                     (Config::BLOCK_WIDTH + 6 * Config::FLAT_BLADE_RADIUS) * Config::SCALE,
+                                     (Config::BLOCK_DEPTH + 6 * Config::FLAT_BLADE_RADIUS) * Config::SCALE,
+                                     math137::Vector3f(-(Config::BLOCK_WIDTH + 6 * Config::FLAT_BLADE_RADIUS) * Config::SCALE * 0.5f, 0.1f, -(Config::BLOCK_DEPTH + 6 * Config::FLAT_BLADE_RADIUS) * Config::SCALE * 0.5f)))
+{
+}
 
 void PathGenerator::remapPoints(
-    const std::vector<std::weak_ptr<Object>> &objects) {
+    const std::vector<std::weak_ptr<Object>> &objects)
+{
 
-  auto blockWidth = Config::BLOCK_WIDTH;
-  auto blockDepth = Config::BLOCK_DEPTH;
+  auto blockWidth = Config::BLOCK_WIDTH - 3.f;
+  auto blockDepth = Config::BLOCK_DEPTH - 3.f;
   auto blockHeight = Config::BLOCK_HEIGHT;
   auto baseHeight = Config::BASE_HEIGHT;
 
-  auto minCorner = math137::Vector3f(0, 0, 0);
+  auto minCorner = math137::Vector3f(0, -1.5f, 0);
   auto maxCorner = math137::Vector3f(0, 0, 0);
   auto center = math137::Vector3f(0, 0, 0);
 
-  for (const auto &weakObj : objects) {
-    if (auto obj = weakObj.lock()) {
-      if (auto point = std::dynamic_pointer_cast<Point>(obj)) {
+  for (const auto &weakObj : objects)
+  {
+    if (auto obj = weakObj.lock())
+    {
+      if (auto point = std::dynamic_pointer_cast<Point>(obj))
+      {
         math137::Vector3f pos = point->getTranslation();
         // Update min and max corners
         minCorner.x(std::min(minCorner.x(), pos.x()));
-        minCorner.y(std::min(minCorner.y(), pos.y()));
         minCorner.z(std::min(minCorner.z(), pos.z()));
         maxCorner.x(std::max(maxCorner.x(), pos.x()));
         maxCorner.y(std::max(maxCorner.y(), pos.y()));
@@ -33,43 +43,47 @@ void PathGenerator::remapPoints(
     }
   }
 
-  for (const auto &weakObj : objects) {
-    if (auto obj = weakObj.lock()) {
-      if (auto point = std::dynamic_pointer_cast<Point>(obj)) {
+  for (const auto &weakObj : objects)
+  {
+    if (auto obj = weakObj.lock())
+    {
+      if (auto point = std::dynamic_pointer_cast<Point>(obj))
+      {
         math137::Vector3f pos = point->getTranslation();
 
         pos.x(((pos.x() - minCorner.x()) / (maxCorner.x() - minCorner.x()) -
                0.5f) *
-              blockWidth);
-        pos.y(((pos.y() - minCorner.y()) / (maxCorner.y() - minCorner.y()) -
-               0.5f) *
-                  (blockHeight - baseHeight) +
-              baseHeight);
+              blockWidth * Config::SCALE);
         pos.z(((pos.z() - minCorner.z()) / (maxCorner.z() - minCorner.z()) -
                0.5f) *
-              blockDepth);
+              blockDepth * Config::SCALE);
         point->setTranslation(pos);
       }
     }
   }
 }
 
-std::vector<std::vector<float>> PathGenerator::generateHeightMap(
-    const std::vector<std::weak_ptr<Object>> &objects) {
+std::vector<std::vector<float>> PathGenerator::generateHeightMap()
+{
   std::vector<std::vector<float>> heightMap(
       Config::HEIGHT_MAP_RESOLUTION,
-      std::vector<float>(Config::HEIGHT_MAP_RESOLUTION, Config::BASE_HEIGHT));
-  for (const auto &weakObj : objects) {
-    if (auto obj = weakObj.lock()) {
-      if (auto surface = std::dynamic_pointer_cast<BezierC2>(obj)) {
-        for (float u = 0; u <= 1.0f; u += Config::SAMPLING_DISTANCE) {
-          for (float v = 0; v <= 1.0f; v += Config::SAMPLING_DISTANCE) {
-            math137::Vector3f pos = surface->getValue(u, v);
-            auto [i, j] = Config::CoordinateToHeightMapIndex(pos.x(), pos.z());
-            if (pos.y() > heightMap[i][j]) {
-              heightMap[i][j] = pos.y();
-            }
-          }
+      std::vector<float>(Config::HEIGHT_MAP_RESOLUTION, 0.f));
+  for (const auto &surface : m_roughSurfaces)
+  {
+    for (float u = 0; u <= 1.0f; u += Config::SAMPLING_DISTANCE_ROUGH)
+    {
+      for (float v = 0; v <= 1.0f; v += Config::SAMPLING_DISTANCE_ROUGH)
+      {
+        math137::Vector3f pos = surface->getValue(u, v);
+        math137::Vector3f du = surface->uDerivative(u, v);
+        math137::Vector3f dv = surface->vDerivative(u, v);
+        if (du * du < 1e-12 || dv * dv < 1e-12)
+          continue;
+
+        auto [i, j] = Config::CoordinateToHeightMapIndex(pos.x(), pos.z());
+        if (pos.y() > heightMap[i][j])
+        {
+          heightMap[i][j] = pos.y();
         }
       }
     }
@@ -78,271 +92,353 @@ std::vector<std::vector<float>> PathGenerator::generateHeightMap(
 }
 
 std::vector<math137::Vector3f>
-PathGenerator::generatePath(const std::unique_ptr<SceneManager> &manager) {
+PathGenerator::generatePath(const std::unique_ptr<SceneManager> &manager)
+{
   std::vector<math137::Vector3f> pathPoints;
-  auto objects = manager->getDrawableObjects();
-  remapPoints(objects);
-  auto heightMap = generateHeightMap(objects);
+  auto heightMap = generateHeightMap();
 
-  for (uint32_t j = 0; j < Config::HEIGHT_MAP_RESOLUTION; j++) {
-    if (j % 2 == 0) {
-      for (uint32_t i = 0; i < Config::HEIGHT_MAP_RESOLUTION; i++) {
-        // we need to find the height of the highest point that is in the radius
-        // of the rough blade
-        float maxHeight = 0.0f;
-        for (int32_t k = -Config::ROUGH_BLADE_RADIUS;
-             k <= Config::ROUGH_BLADE_RADIUS; k++) {
-          for (int32_t l = -Config::ROUGH_BLADE_RADIUS;
-               l <= Config::ROUGH_BLADE_RADIUS; l++) {
-            int32_t ni = static_cast<int32_t>(i) + k;
-            int32_t nj = static_cast<int32_t>(j) + l;
-            if (ni >= 0 &&
-                ni < static_cast<int32_t>(Config::HEIGHT_MAP_RESOLUTION) &&
-                nj >= 0 &&
-                nj < static_cast<int32_t>(Config::HEIGHT_MAP_RESOLUTION)) {
-              float distance = sqrtf(static_cast<float>(k * k + l * l));
-              if (distance <= Config::ROUGH_BLADE_RADIUS) {
-                if (heightMap[ni][nj] > maxHeight) {
-                  maxHeight = heightMap[ni][nj];
-                }
-              }
-            }
-          }
-        }
-        float x =
-            ((static_cast<float>(i) / (Config::HEIGHT_MAP_RESOLUTION - 1)) *
-             Config::BLOCK_WIDTH) -
-            (Config::BLOCK_WIDTH / 2);
-        float z =
-            ((static_cast<float>(j) / (Config::HEIGHT_MAP_RESOLUTION - 1)) *
-             Config::BLOCK_DEPTH) -
-            (Config::BLOCK_DEPTH / 2);
-        float y = maxHeight;
-        pathPoints.emplace_back(math137::Vector3f(x, y, z));
-      }
-    } else {
-      for (int32_t i = Config::HEIGHT_MAP_RESOLUTION - 1; i >= 0; i--) {
-        float x =
-            ((static_cast<float>(i) / (Config::HEIGHT_MAP_RESOLUTION - 1)) *
-             Config::BLOCK_WIDTH) -
-            (Config::BLOCK_WIDTH / 2);
-        float z =
-            ((static_cast<float>(j) / (Config::HEIGHT_MAP_RESOLUTION - 1)) *
-             Config::BLOCK_DEPTH) -
-            (Config::BLOCK_DEPTH / 2);
-        float y = heightMap[i][j];
-        pathPoints.emplace_back(math137::Vector3f(x, y, z));
-      }
+  const uint32_t N = Config::HEIGHT_MAP_RESOLUTION;
+  if (N < 2)
+    return pathPoints;
+
+  auto emitPoint = [&](uint32_t i, uint32_t j, float minHeight)
+  {
+    float x = ((float(i) / (N - 1)) * Config::BLOCK_WIDTH * Config::SCALE) -
+              (Config::BLOCK_WIDTH * Config::SCALE * 0.5f);
+    float z = ((float(j) / (N - 1)) * Config::BLOCK_DEPTH * Config::SCALE) -
+              (Config::BLOCK_DEPTH * Config::SCALE * 0.5f);
+    float h = heightMap[i][j] / Config::SCALE + Config::BASE_HEIGHT + 2.f;
+    float finalHeight = std::max(h, minHeight);
+    pathPoints.emplace_back(x / Config::SCALE, finalHeight, z / Config::SCALE);
+  };
+
+  for (int it = 0; it < 2; it++)
+  {
+    float minHeight = Config::BASE_HEIGHT + 2.f +
+                      (Config::BLOCK_HEIGHT - Config::BASE_HEIGHT) * 0.5f * (1 - it);
+
+    int jStart = (it == 0 ? 0 : int(N) - 1);
+    int jStop = (it == 0 ? int(N) - 1 : 0);
+    std::function jPred = std::less_equal<int>();
+    if (it != 0)
+      jPred = std::greater_equal<int>();
+    auto jInc = (it == 0 ? [](int a)
+                     { return a + 1; }
+                         : [](int a)
+                     { return a - 1; });
+
+    bool forward = true;
+
+    for (int j = jStart; jPred(j, jStop); j = jInc(j))
+    {
+      int iStart = forward ? 0 : int(N) - 1;
+      int iStop = forward ? int(N) - 1 : 0;
+      std::function iPred = std::less_equal<int>();
+      if (!forward)
+        iPred = std::greater_equal<int>();
+      auto iInc = forward ? [](int a)
+      { return a + 1; }
+                          : [](int a)
+      { return a - 1; };
+
+      for (int i = iStart; iPred(i, iStop); i = iInc(i))
+        emitPoint((uint32_t)i, (uint32_t)j, minHeight);
+
+      forward = !forward;
     }
   }
 
   return pathPoints;
 }
 
-std::vector<math137::Vector3f>
-PathGenerator::generateBallPath(const std::unique_ptr<SceneManager> &manager) {
-  std::vector<math137::Vector3f> pathPoints;
+void PathGenerator::createMillingSurface(
+    const std::unique_ptr<SceneManager> &manager, float radius)
+{
   auto objects = manager->getDrawableObjects();
-
-  // More faithful to the referenced Rust solution:
-  // 1) build full (u,v) sampling grid and record: pos, normal, trimmed flag
-  // 2) mark initially valid samples (not trimmed, valid normal, facing up)
-  // 3) conservative dilation: any initially-valid sample whose offset
-  //    (pos + normal*radius) is within radius of any initially-invalid sample
-  //    becomes invalid (this prevents the tool center from overlapping trimmed
-  //    regions).
-  // 4) extract connected components (8-neighbour) on the final valid grid.
-  // 5) for each component emit a continuous stroke. Between components lift
-  //    by TRAVEL_CLEARANCE and approach the next stroke.
-
-  constexpr float eps = 1e-6f;
-  for (const auto &weakObj : objects) {
-    if (auto obj = weakObj.lock()) {
-      if (auto surface = std::dynamic_pointer_cast<BezierC2>(obj)) {
-        // build sampling coordinates
-        std::vector<float> us;
-        std::vector<float> vs;
-        for (float u = 0.0f; u <= 1.0f + 1e-6f; u += Config::SAMPLING_DISTANCE)
-          us.push_back(std::min(u, 1.0f));
-        for (float v = 0.0f; v <= 1.0f + 1e-6f; v += Config::SAMPLING_DISTANCE)
-          vs.push_back(std::min(v, 1.0f));
-
-        int nu = static_cast<int>(us.size());
-        int nv = static_cast<int>(vs.size());
-        if (nu == 0 || nv == 0)
-          continue;
-
-        // record full sample info
-        struct Sample {
-          math137::Vector3f pos;
-          math137::Vector3f offset; // pos + normal*radius (valid only if normal ok)
-          bool trimmed = false;
-          bool normal_ok = false;
-        };
-
-        std::vector<std::vector<Sample>> grid(nu, std::vector<Sample>(nv));
-
-        for (int iu = 0; iu < nu; ++iu) {
-          for (int iv = 0; iv < nv; ++iv) {
-            float u = us[iu];
-            float v = vs[iv];
-            grid[iu][iv].trimmed = surface->isTrimmedUV(u, v);
-            grid[iu][iv].pos = surface->getValue(u, v);
-            math137::Vector3f du = surface->uDerivative(u, v);
-            math137::Vector3f dv = surface->vDerivative(u, v);
-            math137::Vector3f normal = math137::Vector3f::Cross(du, dv);
-            float lenSq = normal.x() * normal.x() + normal.y() * normal.y() +
-                          normal.z() * normal.z();
-            if (lenSq >= eps) {
-              normal.normalize();
-              if (normal.y() > 1e-6f) {
-                grid[iu][iv].normal_ok = true;
-                grid[iu][iv].offset = grid[iu][iv].pos + (normal * Config::BALL_BLADE_RADIUS);
-              }
-            }
-          }
-        }
-
-        // initially valid: not trimmed and normal_ok
-        std::vector<std::vector<char>> valid(nu, std::vector<char>(nv, 0));
-        for (int iu = 0; iu < nu; ++iu)
-          for (int iv = 0; iv < nv; ++iv)
-            valid[iu][iv] = (!grid[iu][iv].trimmed && grid[iu][iv].normal_ok) ? 1 : 0;
-
-        // conservative dilation: any valid sample whose offset is within
-        // BALL_BLADE_RADIUS of any invalid sample's pos becomes invalid.
-        // This is O(N^2) but grids are typically small; it's simple and robust.
-        float r = Config::BALL_BLADE_RADIUS;
-        float r2 = r * r;
-        for (int iu = 0; iu < nu; ++iu) {
-          for (int iv = 0; iv < nv; ++iv) {
-            if (!valid[iu][iv])
-              continue;
-            const math137::Vector3f &myOffset = grid[iu][iv].offset;
-            bool becomes_invalid = false;
-            for (int ju = 0; ju < nu && !becomes_invalid; ++ju) {
-              for (int jv = 0; jv < nv; ++jv) {
-                // consider any sample that is invalid initially (trimmed or normal_bad)
-                if (valid[ju][jv])
-                  continue;
-                const math137::Vector3f &otherPos = grid[ju][jv].pos;
-                float dx = myOffset.x() - otherPos.x();
-                float dy = myOffset.y() - otherPos.y();
-                float dz = myOffset.z() - otherPos.z();
-                float dist2 = dx * dx + dy * dy + dz * dz;
-                if (dist2 <= r2) {
-                  becomes_invalid = true;
-                  break;
-                }
-              }
-            }
-            if (becomes_invalid)
-              valid[iu][iv] = 0;
-          }
-        }
-
-        // Extract connected components (8-neighbour) on the final valid grid.
-        std::vector<std::vector<char>> visited(nu, std::vector<char>(nv, 0));
-        const int d8[8][2] = {{1, 0},  {-1, 0}, {0, 1},  {0, -1},
-                              {1, 1},  {1, -1},  {-1, 1}, {-1, -1}};
-
-        for (int iu = 0; iu < nu; ++iu) {
-          for (int iv = 0; iv < nv; ++iv) {
-            if (!valid[iu][iv] || visited[iu][iv])
-              continue;
-
-            // collect indices for this component
-            std::vector<std::pair<int, int>> compIdx;
-            std::queue<std::pair<int, int>> q;
-            q.push({iu, iv});
-            visited[iu][iv] = 1;
-            while (!q.empty()) {
-              auto cur = q.front();
-              q.pop();
-              int cu = cur.first;
-              int cv = cur.second;
-              compIdx.push_back(cur);
-              for (int k = 0; k < 8; ++k) {
-                int nuu = cu + d8[k][0];
-                int nvv = cv + d8[k][1];
-                if (nuu >= 0 && nuu < nu && nvv >= 0 && nvv < nv) {
-                  if (!visited[nuu][nvv] && valid[nuu][nvv]) {
-                    visited[nuu][nvv] = 1;
-                    q.push({nuu, nvv});
-                  }
-                }
-              }
-            }
-
-            if (compIdx.empty())
-              continue;
-
-            // Order component points: greedy nearest-neighbour on world offsets
-            std::vector<math137::Vector3f> compPts;
-            compPts.reserve(compIdx.size());
-            for (auto &p : compIdx) {
-              compPts.push_back(grid[p.first][p.second].offset);
-            }
-
-            // greedy nearest neighbour ordering
-            std::vector<math137::Vector3f> ordered;
-            ordered.reserve(compPts.size());
-            std::vector<char> used(compPts.size(), 0);
-            if (!compPts.empty()) {
-              // start at the lexicographically smallest index to be deterministic
-              size_t start = 0;
-              for (size_t k = 1; k < compIdx.size(); ++k) {
-                if (compIdx[k] < compIdx[start])
-                  start = k;
-              }
-              ordered.push_back(compPts[start]);
-              used[start] = 1;
-              for (size_t steps = 1; steps < compPts.size(); ++steps) {
-                size_t last = ordered.size() - 1;
-                const auto &lp = ordered[last];
-                float bestDist2 = std::numeric_limits<float>::infinity();
-                size_t bestIdx = SIZE_MAX;
-                for (size_t m = 0; m < compPts.size(); ++m) {
-                  if (used[m])
-                    continue;
-                  float dx = lp.x() - compPts[m].x();
-                  float dy = lp.y() - compPts[m].y();
-                  float dz = lp.z() - compPts[m].z();
-                  float d2 = dx * dx + dy * dy + dz * dz;
-                  if (d2 < bestDist2) {
-                    bestDist2 = d2;
-                    bestIdx = m;
-                  }
-                }
-                if (bestIdx == SIZE_MAX)
-                  break;
-                ordered.push_back(compPts[bestIdx]);
-                used[bestIdx] = 1;
-              }
-            }
-
-            // emit travel lift/approach if needed
-            if (!ordered.empty()) {
-              if (!pathPoints.empty()) {
-                math137::Vector3f last = pathPoints.back();
-                math137::Vector3f liftPoint = last;
-                liftPoint.y(liftPoint.y() + Config::TRAVEL_CLEARANCE);
-                pathPoints.emplace_back(liftPoint);
-
-                math137::Vector3f approach = ordered.front();
-                approach.y(approach.y() + Config::TRAVEL_CLEARANCE);
-                pathPoints.emplace_back(approach);
-              }
-
-              // append ordered points (descent implicit)
-              for (const auto &p : ordered)
-                pathPoints.emplace_back(p);
-            }
-          }
-        }
+  for (const auto &weakObj : objects)
+  {
+    if (auto obj = weakObj.lock())
+    {
+      if (auto surface = std::dynamic_pointer_cast<BezierC2>(obj))
+      {
+        m_detailSurfaces.push_back(std::make_shared<ShiftedSurface>(
+            surface, radius * Config::SCALE));
+        m_roughSurfaces.push_back(std::make_shared<ShiftedSurface>(
+            surface, Config::ROUGH_BLADE_RADIUS * Config::SCALE));
+        m_flatSurfaces.push_back(std::make_shared<ShiftedSurface>(
+            surface, Config::FLAT_BLADE_RADIUS * Config::SCALE));
       }
     }
   }
+  manager->setCursorPosition({-2.5f, 0.394f, 2.786f});
+  manager->addIntersection(m_detailSurfaces[0], m_detailSurfaces[3], true, 0.001f);
+  std::vector<std::pair<int, int>> surfacePairs = {{0, 2}, {0, 3}, {1, 2}, {2, 3}, {2, 4}, {4, 5}, {4, 6}, {1, 4}, {2, 2}};
+  for (const auto &[i, j] : surfacePairs)
+    manager->addIntersection(m_detailSurfaces[i], m_detailSurfaces[j], false, 0.001f);
 
+  std::vector<std::tuple<int, int, bool>> trimmingPairs = {
+      {250, 400, false}, {0, 0, false}, {0, 0, false}, {288, 55, false}, {250, 170, false}, {500, 0, true}, {0, 0, false}, {45, 50, false}, {500, 0, false}, {0, 0, false}, {0, 0, false}, {330, 70, false}, {175, 175, false}, {500, 0, false}, {175, 300, false}, {500, 0, false}, {0, 0, false}, {400, 0, false}, {-1, -1, false}, {-1, -1, false}};
+  int idx = 0;
+  for (const auto &obj : manager->getObjects())
+  {
+    if (auto curve = std::dynamic_pointer_cast<IntersectionCurve>(obj))
+    {
+      if (std::get<0>(trimmingPairs[idx]) != -1)
+      {
+        if (std::get<2>(trimmingPairs[idx]))
+        {
+          curve->intersectTrimmingTexture(std::get<0>(trimmingPairs[idx]), std::get<1>(trimmingPairs[idx]), 0);
+        }
+        else
+        {
+          curve->unionTrimmingTexture(std::get<0>(trimmingPairs[idx]), std::get<1>(trimmingPairs[idx]), 0);
+        }
+      }
+      idx++;
+      if (std::get<0>(trimmingPairs[idx]) != -1)
+      {
+        if (std::get<2>(trimmingPairs[idx]))
+        {
+          curve->intersectTrimmingTexture(std::get<0>(trimmingPairs[idx]), std::get<1>(trimmingPairs[idx]), 1);
+        }
+        else
+        {
+          curve->unionTrimmingTexture(std::get<0>(trimmingPairs[idx]), std::get<1>(trimmingPairs[idx]), 1);
+        }
+        curve->unionTrimmingTexture(std::get<0>(trimmingPairs[idx]), std::get<1>(trimmingPairs[idx]), 1);
+      }
+      idx++;
+    }
+  }
+
+  for (const auto &surface : m_flatSurfaces)
+  {
+    manager->addIntersection(surface, m_groundSurface, false, 0.001f);
+  }
+  manager->m_cursor.setTranslation({-6.3f, 0.3f, 3.695f});
+  manager->addIntersection(m_flatSurfaces[3], m_groundSurface, true, 0.001f);
+}
+
+std::vector<std::vector<math137::Vector3f>>
+PathGenerator::generateBallSegments(const std::unique_ptr<SceneManager> &manager)
+{
+  std::vector<std::vector<math137::Vector3f>> segments;
+  std::shared_ptr<ShiftedSurface> prevSurface = nullptr;
+  math137::Vector3f prevPoint(0, 0, 0);
+  bool hasPrev = false;
+  bool wasInTrimmedRegion = false;
+
+  float start = 0.f;
+  float stop = 1.f;
+  std::function pred = std::less_equal<float>();
+  std::function inc = std::plus<float>();
+  for (const auto &surface : m_detailSurfaces)
+  {
+    bool dir = true;
+    std::vector<math137::Vector3f> segmentPoints;
+    for (float v = 0; v <= 1.0f; v += Config::SAMPLING_DISTANCE_BALL)
+    {
+      if (dir)
+      {
+        start = 0.f;
+        stop = 1.f;
+        pred = std::less_equal<float>();
+        inc = std::plus<float>();
+        dir = false;
+      }
+      else
+      {
+        start = 1.f;
+        stop = 0.f;
+        pred = std::greater_equal<float>();
+        inc = std::minus<float>();
+        dir = true;
+      }
+
+      // collect points for this u-loop (segment) separately
+
+      for (float u = start; pred(u, stop); u = inc(u, Config::SAMPLING_DISTANCE_BALL))
+      {
+        // skip if explicit trimming mask marks this UV as trimmed
+        if (surface->isTrimmedUV(u, v))
+        {
+          wasInTrimmedRegion = true;
+        }
+
+        math137::Vector3f du = surface->uDerivative(u, v);
+        math137::Vector3f dv = surface->vDerivative(u, v);
+        math137::Vector3f normal = math137::Vector3f::Cross(du, dv);
+        normal.normalize();
+
+        if (normal.y() < Config::NORMAL_THRESHOLD || normal.any(
+                                                         [](float coord)
+                                                         { return std::isnan(coord) || std::isinf(coord); }))
+        {
+          wasInTrimmedRegion = true;
+        }
+
+        math137::Vector3f pos = math137::Vector3f(0.f, Config::BASE_HEIGHT, 0.f) + surface->getValue(u, v) / Config::SCALE;
+        if (pos.y() < Config::BASE_HEIGHT + Config::BALL_BLADE_RADIUS || pos.any(
+                                                                             [](float coord)
+                                                                             { return std::isnan(coord) || std::isinf(coord); }))
+        {
+          wasInTrimmedRegion = true;
+        }
+        // add the offset point (ball center position) to segment
+        if (wasInTrimmedRegion && segmentPoints.size() > 0)
+        {
+          segments.emplace_back(std::move(segmentPoints));
+          segmentPoints.clear();
+        }
+        else if (!wasInTrimmedRegion)
+        {
+          segmentPoints.emplace_back(pos);
+        }
+
+        wasInTrimmedRegion = false;
+      }
+    }
+    if (segmentPoints.size() > 0)
+    {
+      segments.emplace_back(std::move(segmentPoints));
+      wasInTrimmedRegion = false;
+    }
+  }
+
+  return segments;
+}
+
+std::vector<std::vector<math137::Vector3f>> PathGenerator::generateFlatSegments(const std::unique_ptr<SceneManager> &manager)
+{
+  std::vector<std::vector<math137::Vector3f>> segments;
+
+  // spacing between passes: 2R - eps (eps = 0.1R)
+  const float R = Config::FLAT_BLADE_RADIUS;
+  const float eps = 0.1f * R;
+  const float step = (2.f * R - eps) * Config::SCALE;
+
+  const float width = (Config::BLOCK_WIDTH + 6.f * R) * Config::SCALE;
+  const float depth = (Config::BLOCK_DEPTH + 6.f * R) * Config::SCALE;
+
+  // x coordinates in world-space where we will run the passes
+  const float halfW = width * 0.5f;
+  const float halfD = depth * 0.5f;
+
+  float stepU = step / width;
+  float stepV = 0.01f;
+
+  int lineIdx = 0;
+  std::vector<math137::Vector3f> segmentPoints;
+  for (float u = 0.f; u <= 1.f; u += stepU)
+  {
+    bool forward = (lineIdx % 2) == 0; // snake direction
+    lineIdx++;
+
+    float vStart = forward ? 0.f : 1.f;
+    float vStop = forward ? 1.f : 0.f;
+    std::function<bool(float, float)> pred;
+    std::function<float(float, float)> inc;
+    if (forward)
+    {
+      pred = std::less_equal<float>();
+      inc = std::plus<float>();
+    }
+    else
+    {
+      pred = std::greater_equal<float>();
+      inc = std::minus<float>();
+    }
+
+    for (float v = vStart; pred(v, vStop); v = inc(v, stepV))
+    {
+      if (!m_groundSurface->isTrimmedUV(u, v))
+      {
+        if (segmentPoints.size() > 0)
+        {
+          segments.emplace_back(std::move(segmentPoints));
+          segmentPoints.clear();
+        }
+        continue;
+      }
+      math137::Vector3f pos = m_groundSurface->getValue(u, v) / Config::SCALE;
+      pos.y(Config::BASE_HEIGHT + 2.f);
+
+      segmentPoints.emplace_back(pos);
+    }
+  }
+
+  if (!segmentPoints.empty())
+    segments.emplace_back(std::move(segmentPoints));
+
+  auto silhouetteSegment = generateSilhouetteSegment(manager);
+  segments.insert(segments.end(), silhouetteSegment.begin(), silhouetteSegment.end());
+
+  return segments;
+}
+
+std::vector<std::vector<math137::Vector3f>> PathGenerator::generateSilhouetteSegment(const std::unique_ptr<SceneManager> &manager)
+{
+  auto contours = m_groundSurface->extractAllContours();
+  std::vector<std::vector<math137::Vector3f>> silhouette;
+  for (auto &contour : contours)
+  {
+    std::transform(contour.begin(), contour.end(), contour.begin(), [](const math137::Vector3f &pos)
+                   { return math137::Vector3f(pos.x() / Config::SCALE, Config::BASE_HEIGHT + 2.f, pos.z() / Config::SCALE); });
+    silhouette.emplace_back(std::move(contour));
+  }
+  return silhouette;
+}
+
+std::vector<math137::Vector3f>
+PathGenerator::generateBallPath(const std::unique_ptr<SceneManager> &manager)
+{
+  std::vector<math137::Vector3f> pathPoints;
+  auto objects = manager->getDrawableObjects();
+  auto segments = generateBallSegments(manager);
+
+  for (const auto &segment : segments)
+  {
+    if (segment.size() < 2)
+      continue;
+
+    if (pathPoints.size() > 0)
+    {
+      // add a connecting point between segments
+      math137::Vector3f lastPoint = pathPoints.back();
+      math137::Vector3f firstPoint = segment.front();
+      lastPoint.y(Config::TRAVEL_CLEARANCE);
+      pathPoints.emplace_back(lastPoint);
+      firstPoint.y(Config::TRAVEL_CLEARANCE);
+      pathPoints.emplace_back(firstPoint);
+    }
+    pathPoints.insert(pathPoints.end(), segment.begin(), segment.end());
+  }
+  return pathPoints;
+}
+
+std::vector<math137::Vector3f>
+PathGenerator::generateFlatPath(const std::unique_ptr<SceneManager> &manager)
+{
+  std::vector<math137::Vector3f> pathPoints;
+  auto objects = manager->getDrawableObjects();
+  auto segments = generateFlatSegments(manager);
+
+  for (const auto &segment : segments)
+  {
+    if (segment.size() < 2)
+      continue;
+
+    if (pathPoints.size() > 0)
+    {
+      // add a connecting point between segments
+      math137::Vector3f lastPoint = pathPoints.back();
+      math137::Vector3f firstPoint = segment.front();
+      lastPoint.y(Config::TRAVEL_CLEARANCE);
+      pathPoints.emplace_back(lastPoint);
+      firstPoint.y(Config::TRAVEL_CLEARANCE);
+      pathPoints.emplace_back(firstPoint);
+    }
+    pathPoints.insert(pathPoints.end(), segment.begin(), segment.end());
+  }
   return pathPoints;
 }

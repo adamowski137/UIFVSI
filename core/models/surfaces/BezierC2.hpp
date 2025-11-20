@@ -12,6 +12,7 @@ public:
            uint16_t uPatches, uint16_t vPatches);
   ~BezierC2() {}
 
+
   void notify() override;
   void render(std::shared_ptr<Renderer> &renderer,
               const math137::Vector4f &color) override;
@@ -19,6 +20,9 @@ public:
                          unsigned int id) override;
   virtual math137::Vector3f uDerivative(float u, float v) const override;
   virtual math137::Vector3f vDerivative(float u, float v) const override;
+  math137::Vector3f uuDerivative(float u, float v) const;
+  math137::Vector3f vvDerivative(float u, float v) const;
+  math137::Vector3f uvDerivative(float u, float v) const;
   virtual math137::Vector3f getValue(float u, float v) const override;
   virtual bool wrappableV() const override {
     return m_points[0][0].lock() == m_points[0][m_points[0].size() - 3].lock();
@@ -34,4 +38,5 @@ private:
   void recalculateModel() override { m_update = false; }
   float BSpline(int i, float t) const;
   float dBSpline(int i, float t) const;
+  float ddBSpline(int i, float t) const;
 };

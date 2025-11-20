@@ -27,7 +27,6 @@ IntersectionCurve::IntersectionCurve(const math137::Vector4f &start,
   glGenTextures(2, m_textureIds);
   for (uint8_t i = 0; i < 2; i++) {
     m_openPopup[i] = false;
-    m_textureData[i].resize(m_width * m_height);
     glBindTexture(GL_TEXTURE_2D, m_textureIds[i]);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, m_width, m_height, 0, GL_RED,
                  GL_UNSIGNED_BYTE, nullptr);
@@ -75,6 +74,7 @@ void IntersectionCurve::setVertices() {
 
 void IntersectionCurve::setTextures() {
   for (uint8_t i = 0; i < 2; i++) {
+    Intersectable& inter = (i == 0) ? *m_intersectable1.lock() : * m_intersectable2.lock();
     for (uint16_t j = 1; j < m_params.size(); j++) {
       math137::Vector4f vec = m_params[j - 1];
       math137::Vector4f vec2 = m_params[j];
@@ -128,26 +128,26 @@ void IntersectionCurve::setTextures() {
         int x1 = std::clamp((int)(midV2 * m_width), 0, m_width - 1);
         int y2 = std::clamp((int)(u1 * m_height), 0, m_height - 1);
         int x2 = std::clamp((int)(v1 * m_width), 0, m_width - 1);
-        bresenhamAlgorithm(x1, y1, x2, y2, m_textureData[i]);
+        bresenhamAlgorithm(x1, y1, x2, y2, inter.m_textureData); 
 
         y1 = std::clamp((int)(midU1 * m_height), 0, m_height - 1);
         x1 = std::clamp((int)(midV1 * m_width), 0, m_width - 1);
         y2 = std::clamp((int)(u2 * m_height), 0, m_height - 1);
         x2 = std::clamp((int)(v2 * m_width), 0, m_width - 1);
-        bresenhamAlgorithm(x1, y1, x2, y2, m_textureData[i]);
+        bresenhamAlgorithm(x1, y1, x2, y2, inter.m_textureData);
       } else {
         // Normalne rysowanie
         int x1 = std::clamp((int)(u1 * m_height), 0, m_height - 1);
         int y1 = std::clamp((int)(v1 * m_width), 0, m_width - 1);
         int x2 = std::clamp((int)(u2 * m_height), 0, m_height - 1);
         int y2 = std::clamp((int)(v2 * m_width), 0, m_width - 1);
-        bresenhamAlgorithm(y1, x1, y2, x2, m_textureData[i]);
+        bresenhamAlgorithm(y1, x1, y2, x2, inter.m_textureData);
       }
     }
 
     glBindTexture(GL_TEXTURE_2D, m_textureIds[i]);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, m_width, m_height, GL_RED,
-                    GL_UNSIGNED_BYTE, m_textureData[i].data());
+                    GL_UNSIGNED_BYTE, inter.m_textureData.data());
   }
 }
 
@@ -235,12 +235,12 @@ bool IntersectionCurve::renderObjectMenu() {
     ImGui::InputInt2("Pixel ", pos);
     if (ImGui::Button("Union Trim 1")) {
       if (auto s = m_intersectable1.lock())
-        s->unionTrimmingTexture(m_textureData[0], pos[0], pos[1]);
+        s->unionTrimmingTexture(m_intersectable1.lock()->m_textureData, pos[0], pos[1]);
     }
     ImGui::SameLine();
     if (ImGui::Button("Intersect Trim 1")) {
       if (auto s = m_intersectable1.lock())
-        s->intersectTrimmingTexture(m_textureData[0], pos[0], pos[1]);
+        s->intersectTrimmingTexture(m_intersectable1.lock()->m_textureData, pos[0], pos[1]);
     }
     ImGui::SameLine();
     if (ImGui::Button("Reset trimming")) {
@@ -271,12 +271,12 @@ bool IntersectionCurve::renderObjectMenu() {
     ImGui::InputInt2("Pixel ", pos);
     if (ImGui::Button("Union Trim 2")) {
       if (auto s = m_intersectable2.lock())
-        s->unionTrimmingTexture(m_textureData[1], pos[0], pos[1]);
+        s->unionTrimmingTexture(m_intersectable2.lock()->m_textureData, pos[0], pos[1]);
     }
     ImGui::SameLine();
     if (ImGui::Button("Intersect Trim 2")) {
       if (auto s = m_intersectable2.lock())
-        s->intersectTrimmingTexture(m_textureData[1], pos[0], pos[1]);
+        s->intersectTrimmingTexture(m_intersectable2.lock()->m_textureData, pos[0], pos[1]);
     }
     ImGui::SameLine();
     if (ImGui::Button("Reset trimming")) {
@@ -292,4 +292,20 @@ std::vector<math137::Vector3f> IntersectionCurve::getPoints() const {
   for (const auto &p : m_params)
     res.push_back(m_intersectable1.lock()->getValue(p.x(), p.y()));
   return res;
+}
+
+void IntersectionCurve::unionTrimmingTexture(uint16_t x, uint16_t y, uint8_t surfaceIndex)
+{
+  if (surfaceIndex >= 2)
+    return;
+  if (auto s = (surfaceIndex == 0 ? m_intersectable1.lock() : m_intersectable2.lock()))
+    s->unionTrimmingTexture(s->m_textureData, x, y);
+}
+
+void IntersectionCurve::intersectTrimmingTexture(uint16_t x, uint16_t y, uint8_t surfaceIndex)
+{
+  if (surfaceIndex >= 2)
+    return;
+  if (auto s = (surfaceIndex == 0 ? m_intersectable1.lock() : m_intersectable2.lock()))
+    s->intersectTrimmingTexture(s->m_textureData, x, y);
 }

@@ -169,12 +169,28 @@ float BezierC2::dBSpline(int i, float t) const {
     return 0;
   }
 }
+
+float BezierC2::ddBSpline(int i, float t) const {
+  switch (i) {
+  case 0:
+    return (1.0f - t);
+  case 1:
+    return (3.0f * t - 2.0f);
+  case 2:
+    return (-3.0f * t + 1.0f);
+  case 3:
+    return t;
+  default:
+    return 0.0f;
+  }
+}
+
 math137::Vector3f BezierC2::getValue(float u, float v) const {
   uint16_t ubPatches = m_points.size() - 3;
   uint16_t vbPatches = m_points[0].size() - 3;
 
-  uint16_t uIndex = std::min(int(u * ubPatches), ubPatches - 1);
-  uint16_t vIndex = std::min(int(v * vbPatches), vbPatches - 1);
+  uint16_t uIndex = std::max(std::min(int(u * ubPatches), ubPatches - 1), 0);
+  uint16_t vIndex = std::max(std::min(int(v * vbPatches), vbPatches - 1), 0);
   float nu = (u * ubPatches) - uIndex;
   float nv = (v * vbPatches) - vIndex;
   math137::Vector3f local;
@@ -191,8 +207,8 @@ math137::Vector3f BezierC2::uDerivative(float u, float v) const {
   uint16_t ubPatches = m_points.size() - 3;
   uint16_t vbPatches = m_points[0].size() - 3;
 
-  uint16_t uIndex = std::min(int(u * ubPatches), ubPatches - 1);
-  uint16_t vIndex = std::min(int(v * vbPatches), vbPatches - 1);
+  uint16_t uIndex = std::max(std::min(int(u * ubPatches), ubPatches - 1), 0);
+  uint16_t vIndex = std::max(std::min(int(v * vbPatches), vbPatches - 1), 0);
   float nu = (u * ubPatches) - uIndex;
   float nv = (v * vbPatches) - vIndex;
   math137::Vector3f local;
@@ -209,8 +225,8 @@ math137::Vector3f BezierC2::vDerivative(float u, float v) const {
   uint16_t ubPatches = m_points.size() - 3;
   uint16_t vbPatches = m_points[0].size() - 3;
 
-  uint16_t uIndex = std::min(int(u * ubPatches), ubPatches - 1);
-  uint16_t vIndex = std::min(int(v * vbPatches), vbPatches - 1);
+  uint16_t uIndex = std::max(std::min(int(u * ubPatches), ubPatches - 1), 0);
+  uint16_t vIndex = std::max(std::min(int(v * vbPatches), vbPatches - 1), 0);
   float nu = (u * ubPatches) - uIndex;
   float nv = (v * vbPatches) - vIndex;
   math137::Vector3f local;
@@ -219,6 +235,62 @@ math137::Vector3f BezierC2::vDerivative(float u, float v) const {
       local =
           local + m_points[uIndex + du][vIndex + dv].lock()->getTranslation() *
                       vbPatches * (BSpline(du, nu) * dBSpline(dv, nv));
+    }
+  }
+  return local;
+}
+
+math137::Vector3f BezierC2::uuDerivative(float u, float v) const
+{
+  uint16_t ubPatches = m_points.size() - 3;
+  uint16_t vbPatches = m_points[0].size() - 3;
+  uint16_t uIndex = std::max(std::min(int(u * ubPatches), ubPatches - 1), 0);
+  uint16_t vIndex = std::max(std::min(int(v * vbPatches), vbPatches - 1), 0);
+  float nu = (u * ubPatches) - uIndex;
+  float nv = (v * vbPatches) - vIndex;
+  math137::Vector3f local;
+  for (uint16_t du = 0; du < 4; du++) {
+    for (uint16_t dv = 0; dv < 4; dv++) {
+      local =
+          local + m_points[uIndex + du][vIndex + dv].lock()->getTranslation() *
+                      ubPatches * ubPatches * (ddBSpline(du, nu) * BSpline(dv, nv));
+    }
+  }
+  return local;
+}
+
+math137::Vector3f BezierC2::vvDerivative(float u, float v) const
+{
+  uint16_t ubPatches = m_points.size() - 3;
+  uint16_t vbPatches = m_points[0].size() - 3;
+  uint16_t uIndex = std::max(std::min(int(u * ubPatches), ubPatches - 1), 0);
+  uint16_t vIndex = std::max(std::min(int(v * vbPatches), vbPatches - 1), 0);
+  float nu = (u * ubPatches) - uIndex;
+  float nv = (v * vbPatches) - vIndex;
+  math137::Vector3f local;
+  for (uint16_t du = 0; du < 4; du++) {
+    for (uint16_t dv = 0; dv < 4; dv++) {
+      local =
+          local + m_points[uIndex + du][vIndex + dv].lock()->getTranslation() *
+                      vbPatches * vbPatches * (BSpline(du, nu) * ddBSpline(dv, nv));
+    }
+  }
+  return local;
+}
+math137::Vector3f BezierC2::uvDerivative(float u, float v) const
+{
+  uint16_t ubPatches = m_points.size() - 3;
+  uint16_t vbPatches = m_points[0].size() - 3;
+  uint16_t uIndex = std::max(std::min(int(u * ubPatches), ubPatches - 1), 0);
+  uint16_t vIndex = std::max(std::min(int(v * vbPatches), vbPatches - 1), 0);
+  float nu = (u * ubPatches) - uIndex;
+  float nv = (v * vbPatches) - vIndex;
+  math137::Vector3f local;
+  for (uint16_t du = 0; du < 4; du++) {
+    for (uint16_t dv = 0; dv < 4; dv++) {
+      local =
+          local + m_points[uIndex + du][vIndex + dv].lock()->getTranslation() *
+                      ubPatches * vbPatches * (dBSpline(du, nu) * dBSpline(dv, nv));
     }
   }
   return local;

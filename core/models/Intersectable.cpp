@@ -3,8 +3,10 @@
 #include <cstdint>
 #include <stack>
 
-Intersectable::Intersectable() {
+Intersectable::Intersectable()
+{
   m_trimmingData.resize(m_width * m_height);
+  m_textureData.resize(m_width * m_height);
   glGenTextures(1, &m_trimmingTexture);
   glBindTexture(GL_TEXTURE_2D, m_trimmingTexture);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, m_width, m_height, 0, GL_RED,
@@ -19,7 +21,8 @@ Intersectable::Intersectable() {
 Intersectable::~Intersectable() { glDeleteTextures(1, &m_trimmingTexture); }
 
 void Intersectable::intersectTrimmingTexture(const std::vector<uint8_t> &v,
-                                       uint16_t x, uint16_t y) {
+                                             uint16_t x, uint16_t y)
+{
   // Create a temporary buffer for the incoming mask sized to the internal
   // trimming buffer. Copy the incoming data (or zeros if smaller), perform
   // a flood-fill expansion on that temporary mask starting from (x,y), then
@@ -33,14 +36,17 @@ void Intersectable::intersectTrimmingTexture(const std::vector<uint8_t> &v,
   // wrap/edge behavior as unionTrimmingTexture.
   std::stack<std::pair<int, int>> s;
   s.push({static_cast<int>(x), static_cast<int>(y)});
-  while (!s.empty()) {
+  while (!s.empty())
+  {
     auto [xx, yy] = s.top();
     s.pop();
 
-    if ((yy < 0 || yy >= m_height) && !wrappableU()) {
+    if ((yy < 0 || yy >= m_height) && !wrappableU())
+    {
       continue;
     }
-    if ((xx < 0 || xx >= m_width) && !wrappableV()) {
+    if ((xx < 0 || xx >= m_width) && !wrappableV())
+    {
       continue;
     }
 
@@ -52,22 +58,27 @@ void Intersectable::intersectTrimmingTexture(const std::vector<uint8_t> &v,
       continue; // already filled
     temp[idx] = 255;
 
-    if (xx > 0 && temp[yy * m_width + xx - 1] == 0) {
+    if (xx > 0 && temp[yy * m_width + xx - 1] == 0)
+    {
       s.push({xx - 1, yy});
     }
-    if (xx < m_width - 1 && temp[yy * m_width + xx + 1] == 0) {
+    if (xx < m_width - 1 && temp[yy * m_width + xx + 1] == 0)
+    {
       s.push({xx + 1, yy});
     }
-    if (yy > 0 && temp[(yy - 1) * m_width + xx] == 0) {
+    if (yy > 0 && temp[(yy - 1) * m_width + xx] == 0)
+    {
       s.push({xx, yy - 1});
     }
-    if (yy < m_height - 1 && temp[(yy + 1) * m_width + xx] == 0) {
+    if (yy < m_height - 1 && temp[(yy + 1) * m_width + xx] == 0)
+    {
       s.push({xx, yy + 1});
     }
   }
 
   // Intersect: keep only pixels present in both existing mask and filled temp
-  for (size_t i = 0; i < m_trimmingData.size(); ++i) {
+  for (size_t i = 0; i < m_trimmingData.size(); ++i)
+  {
     m_trimmingData[i] = (m_trimmingData[i] != 0 && temp[i] != 0) ? 255 : 0;
   }
 
@@ -79,11 +90,13 @@ void Intersectable::intersectTrimmingTexture(const std::vector<uint8_t> &v,
 }
 
 void Intersectable::unionTrimmingTexture(const std::vector<uint8_t> &v,
-                                         uint16_t x, uint16_t y) {
+                                         uint16_t x, uint16_t y)
+{
   // OR incoming data into existing mask (union). Any non-zero in `v` marks
   // the pixel as trimmed.
   size_t minSz = std::min(m_trimmingData.size(), v.size());
-  for (size_t i = 0; i < minSz; ++i) {
+  for (size_t i = 0; i < minSz; ++i)
+  {
     if (v[i] != 0)
       m_trimmingData[i] = 255;
   }
@@ -92,14 +105,17 @@ void Intersectable::unionTrimmingTexture(const std::vector<uint8_t> &v,
   // so the seed pixel expands the trimmed region if requested by the UI.
   std::stack<std::pair<int, int>> s;
   s.push({x, y});
-  while (!s.empty()) {
+  while (!s.empty())
+  {
     auto [xx, yy] = s.top();
     s.pop();
 
-    if ((yy < 0 || yy >= m_height) && !wrappableU()) {
+    if ((yy < 0 || yy >= m_height) && !wrappableU())
+    {
       continue;
     }
-    if ((xx < 0 || xx >= m_width) && !wrappableV()) {
+    if ((xx < 0 || xx >= m_width) && !wrappableV())
+    {
       continue;
     }
 
@@ -107,19 +123,23 @@ void Intersectable::unionTrimmingTexture(const std::vector<uint8_t> &v,
     yy = (yy + m_height) % m_height;
 
     m_trimmingData[yy * m_width + xx] = 255;
-    if (xx > 0 && m_trimmingData[yy * m_width + xx - 1] == 0) {
+    if (xx > 0 && m_trimmingData[yy * m_width + xx - 1] == 0)
+    {
       s.push({xx - 1, yy});
       m_trimmingData[yy * m_width + xx - 1] = 255;
     }
-    if (xx < m_width - 1 && m_trimmingData[yy * m_width + xx + 1] == 0) {
+    if (xx < m_width - 1 && m_trimmingData[yy * m_width + xx + 1] == 0)
+    {
       s.push({xx + 1, yy});
       m_trimmingData[yy * m_width + xx + 1] = 255;
     }
-    if (yy > 0 && m_trimmingData[(yy - 1) * m_width + xx] == 0) {
+    if (yy > 0 && m_trimmingData[(yy - 1) * m_width + xx] == 0)
+    {
       s.push({xx, yy - 1});
       m_trimmingData[(yy - 1) * m_width + xx] = 255;
     }
-    if (yy < m_height - 1 && m_trimmingData[(yy + 1) * m_width + xx] == 0) {
+    if (yy < m_height - 1 && m_trimmingData[(yy + 1) * m_width + xx] == 0)
+    {
       s.push({xx, yy + 1});
       m_trimmingData[(yy + 1) * m_width + xx] = 255;
     }
@@ -131,7 +151,8 @@ void Intersectable::unionTrimmingTexture(const std::vector<uint8_t> &v,
   glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-void Intersectable::resetTrimming() {
+void Intersectable::resetTrimming()
+{
   std::fill(m_trimmingData.begin(), m_trimmingData.end(), 0);
   glBindTexture(GL_TEXTURE_2D, m_trimmingTexture);
   glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, m_width, m_height, GL_RED,
@@ -139,22 +160,107 @@ void Intersectable::resetTrimming() {
   glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-bool Intersectable::isTrimmedUV(float u, float v) const {
+bool Intersectable::isTrimmedUV(float u, float v) const
+{
   int x = static_cast<int>(v * m_width);
   int y = static_cast<int>(u * m_height);
 
-  if (!wrappableU()) {
-    if (y < 0) y = 0;
-    if (y >= (int)m_height) y = (int)m_height - 1;
-  } else {
+  if (!wrappableU())
+  {
+    if (y < 0)
+      y = 0;
+    if (y >= (int)m_height)
+      y = (int)m_height - 1;
+  }
+  else
+  {
     y = (y % (int)m_height + (int)m_height) % (int)m_height;
   }
-  if (!wrappableV()) {
-    if (x < 0) x = 0;
-    if (x >= (int)m_width) x = (int)m_width - 1;
-  } else {
+  if (!wrappableV())
+  {
+    if (x < 0)
+      x = 0;
+    if (x >= (int)m_width)
+      x = (int)m_width - 1;
+  }
+  else
+  {
     x = (x % (int)m_width + (int)m_width) % (int)m_width;
   }
 
   return m_trimmingData[y * m_width + x] != 0;
+}
+std::vector<math137::Vector3f> Intersectable::extractContour(int sx, int sy) const
+{
+  constexpr int nx8[8] = {1, 1, 0, -1, -1, -1, 0, 1};
+  constexpr int ny8[8] = {0, 1, 1, 1, 0, -1, -1, -1};
+
+  std::vector<math137::Vector3f> path;
+
+  int dir = 0;
+  int x = sx, y = sy;
+  path.emplace_back(x, y);
+
+  do
+  {
+    int startDir = (dir + 6) % 8; // 6 = -90° w Moore grid (8 kierunków)
+    int foundDir = -1;
+
+    for (int i = 0; i < 8; i++)
+    {
+      int nd = (startDir + i) % 8;
+      int nx = x + nx8[nd];
+      int ny = y + ny8[nd];
+      if (nx < 0 || nx >= m_width || ny < 0 || ny >= m_height)
+        continue; // poza granicami
+      if (m_textureData[ny * m_width + nx] != 0)
+      {
+        foundDir = nd;
+        x = nx;
+        y = ny;
+        path.emplace_back(getValue(static_cast<float>(y) / (m_height - 1), static_cast<float>(x) / (m_width - 1)));
+        dir = nd;
+        break;
+      }
+    }
+
+    if (foundDir == -1)
+    {
+      // Nie znaleziono nic — obwód jest samoprzecinający lub błędny
+      break;
+    }
+
+  } while (!(x == sx && y == sy && path.size() > 1));
+
+  return path;
+}
+std::vector<std::vector<math137::Vector3f>> Intersectable::extractAllContours() const
+{
+  auto [sx1, sy1] = findFirstContourPoint(1, 1);
+  auto contour1 = extractContour(sx1, sy1);
+  auto [sx2, sy2] = findFirstContourPoint(300, 110);
+  auto contour2 = extractContour(sx2, sy2);
+  return {contour1, contour2};
+}
+
+std::pair<int, int> Intersectable::findFirstContourPoint(int startX, int startY) const
+{
+  int sx = -1, sy = -1;
+
+  for (int y = startY; y < m_height; y++)
+  {
+    for (int x = startX; x < m_width; x++)
+    {
+      if (m_textureData[y * m_width + x] != 0)
+      {
+        sx = x;
+        sy = y;
+        break;
+      }
+    }
+    if (sx != -1)
+      break;
+  }
+
+  return std::pair<int, int>(sx, sy);
 }

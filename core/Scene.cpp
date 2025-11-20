@@ -183,16 +183,28 @@ void Scene::renderMenu(std::unique_ptr<SceneManager> &manager, State &state) {
     else
       state.setDisplayMode(DisplayMode::DEFAULT);
   }
-  if(ImGui::Button("Generate Path")) {
-    auto path = PathGenerator().generatePath(manager);
-    std::ofstream file("/home/adamowski137/Desktop/projekty/mill-simulator/paths/7.k16");
+  static PathGenerator pathGen;
+  if(ImGui::Button("Create Milling Surface")) {
+    pathGen.createMillingSurface(manager, 4.f);
+  }
+  if(ImGui::Button("Generate Rough Path")) {
+    auto path = pathGen.generatePath(manager);
+    std::ofstream file("C:/Users/adam/Desktop/projekty/mill-simulator/paths/7.k16");
     Parser::parseMovesToFile(path, file);
     file.close();
-    file.open("/home/adamowski137/Desktop/projekty/mill-simulator/paths/8.k08");
-    auto ballPath = PathGenerator().generateBallPath(manager);
-    Parser::parseMovesToFile(ballPath, file);
+  }
+  if(ImGui::Button("Generate Ball Path")) {
+    auto path = pathGen.generateBallPath(manager);
+    std::ofstream file("C:/Users/adam/Desktop/projekty/mill-simulator/paths/8.k08");
+    Parser::parseMovesToFile(path, file);
     file.close();
   }
+    if(ImGui::Button("Generate Flat Path")) {
+    auto path = pathGen.generateFlatPath(manager);
+    std::ofstream file("C:/Users/adam/Desktop/projekty/mill-simulator/paths/9.f10");
+    Parser::parseMovesToFile(path, file);
+    file.close();
+    }
   if (ImGuiFileDialog::Instance()->Display("ExportFile")) {
     if (ImGuiFileDialog::Instance()->IsOk()) {
       std::string filePath = ImGuiFileDialog::Instance()->GetFilePathName();

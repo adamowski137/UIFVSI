@@ -1,4 +1,3 @@
-#define _USE_MATH_DEFINES
 #include "Transformations.hpp"
 #include "Quaternion.hpp"
 #include "State.hpp"

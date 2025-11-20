@@ -29,6 +29,8 @@ add_executable(${PROJECT_NAME}
   core/models/surfaces/BezierC0.cpp
   core/models/surfaces/BezierC2.cpp
   core/models/surfaces/Surface.cpp
+  core/models/surfaces/ShiftedSurface.cpp
+  core/models/surfaces/FlatSurface.cpp
   core/models/surfaces/SurfaceBuilder.cpp
   core/serialize/Serializer.cpp
   core/serialize/Parser.cpp
