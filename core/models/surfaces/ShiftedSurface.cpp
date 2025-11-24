@@ -89,24 +89,22 @@ math137::Vector3f ShiftedSurface::getValue(float u, float v) const
   return p + n * m_radius;
 }
 
-void ShiftedSurface::intersectTrimmingTexture(const std::vector<uint8_t> &data,
-                                              uint16_t x, uint16_t y)
+void ShiftedSurface::intersectTrimmingTexture(uint16_t x, uint16_t y)
 {
   if (m_base)
   {
-    m_base->intersectTrimmingTexture(data, x, y);
+    m_base->intersectTrimmingTexture(x, y);
   }
-  Intersectable::intersectTrimmingTexture(data, x, y);
+  Intersectable::intersectTrimmingTexture(x, y);
 }
 
-void ShiftedSurface::unionTrimmingTexture(const std::vector<uint8_t> &data,
-                                          uint16_t x, uint16_t y)
+void ShiftedSurface::unionTrimmingTexture(uint16_t x, uint16_t y)
 {
   if (m_base)
   {
-    m_base->unionTrimmingTexture(data, x, y);
+    m_base->unionTrimmingTexture(x, y);
   }
-  Intersectable::unionTrimmingTexture(data, x, y);
+  Intersectable::unionTrimmingTexture(x, y);
 }
 
 void ShiftedSurface::resetTrimming()

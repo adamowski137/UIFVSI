@@ -13,13 +13,16 @@ public:
     std::vector<math137::Vector3f> generateFlatPath(const std::unique_ptr<SceneManager> &manager);
     std::vector<std::vector<math137::Vector3f>> generateBallSegments(const std::unique_ptr<SceneManager> &manager);
     std::vector<std::vector<math137::Vector3f>> generateFlatSegments(const std::unique_ptr<SceneManager> &manager);
-    std::vector<std::vector<math137::Vector3f>> generateSilhouetteSegment(const std::unique_ptr<SceneManager> &manager);
     void createMillingSurface(const std::unique_ptr<SceneManager> &manager, float radius);
 private:
+    std::vector<std::vector<math137::Vector3f>> generateFlatSilhouetteSegment();
+    std::vector<std::vector<math137::Vector3f>> generateDetailSilhouetteSegment();
+    void generateDetailTrimmingSegment();
     void remapPoints(const std::vector<std::weak_ptr<Object>> &objects);
     std::vector<std::vector<float>> generateHeightMap();
     std::vector<std::shared_ptr<ShiftedSurface>> m_detailSurfaces;
     std::vector<std::shared_ptr<ShiftedSurface>> m_roughSurfaces;
     std::vector<std::shared_ptr<ShiftedSurface>> m_flatSurfaces;
-    std::shared_ptr<FlatSurface> m_groundSurface;
+    std::shared_ptr<FlatSurface> m_flatGroundSurface;
+    std::shared_ptr<FlatSurface> m_detailGroundSurface;
 };

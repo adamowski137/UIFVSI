@@ -2,6 +2,7 @@
 #include <GL/glew.h>
 #include <cstdint>
 #include <stack>
+#include <set>
 
 Intersectable::Intersectable()
 {
@@ -20,17 +21,17 @@ Intersectable::Intersectable()
 
 Intersectable::~Intersectable() { glDeleteTextures(1, &m_trimmingTexture); }
 
-void Intersectable::intersectTrimmingTexture(const std::vector<uint8_t> &v,
-                                             uint16_t x, uint16_t y)
+void Intersectable::intersectTrimmingTexture(
+    uint16_t x, uint16_t y)
 {
   // Create a temporary buffer for the incoming mask sized to the internal
   // trimming buffer. Copy the incoming data (or zeros if smaller), perform
   // a flood-fill expansion on that temporary mask starting from (x,y), then
   // intersect the filled temporary mask with the existing trimming mask.
   std::vector<uint8_t> temp(m_trimmingData.size(), 0);
-  size_t minSz = std::min(m_trimmingData.size(), v.size());
+  size_t minSz = m_trimmingData.size();
   for (size_t i = 0; i < minSz; ++i)
-    temp[i] = (v[i] != 0) ? 255 : 0;
+    temp[i] = (m_textureData[i] != 0) ? 255 : 0;
 
   // Flood-fill the temporary mask from the seed (x,y) using the same
   // wrap/edge behavior as unionTrimmingTexture.
@@ -89,15 +90,14 @@ void Intersectable::intersectTrimmingTexture(const std::vector<uint8_t> &v,
   glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-void Intersectable::unionTrimmingTexture(const std::vector<uint8_t> &v,
-                                         uint16_t x, uint16_t y)
+void Intersectable::unionTrimmingTexture(uint16_t x, uint16_t y)
 {
   // OR incoming data into existing mask (union). Any non-zero in `v` marks
   // the pixel as trimmed.
-  size_t minSz = std::min(m_trimmingData.size(), v.size());
+  size_t minSz = m_trimmingData.size();
   for (size_t i = 0; i < minSz; ++i)
   {
-    if (v[i] != 0)
+    if (m_textureData[i] != 0)
       m_trimmingData[i] = 255;
   }
 
@@ -162,8 +162,8 @@ void Intersectable::resetTrimming()
 
 bool Intersectable::isTrimmedUV(float u, float v) const
 {
-  int x = static_cast<int>(v * m_width);
-  int y = static_cast<int>(u * m_height);
+  int x = static_cast<int>(v * (m_width - 1));
+  int y = static_cast<int>(u * (m_height - 1));
 
   if (!wrappableU())
   {
@@ -196,11 +196,14 @@ std::vector<math137::Vector3f> Intersectable::extractContour(int sx, int sy) con
   constexpr int ny8[8] = {0, 1, 1, 1, 0, -1, -1, -1};
 
   std::vector<math137::Vector3f> path;
+  std::set<std::pair<int, int>> visited;
 
   int dir = 0;
-  int x = sx, y = sy;
-  path.emplace_back(x, y);
-
+  auto [x, y] = findFirstContourPoint(sx, sy);
+  if (x == -1 || y == -1)
+    return path; // brak punktów konturu
+  path.emplace_back(getValue(static_cast<float>(y) / (m_height - 1), static_cast<float>(x) / (m_width - 1)));
+  visited.insert({x, y});
   do
   {
     int startDir = (dir + 6) % 8; // 6 = -90° w Moore grid (8 kierunków)
@@ -213,11 +216,12 @@ std::vector<math137::Vector3f> Intersectable::extractContour(int sx, int sy) con
       int ny = y + ny8[nd];
       if (nx < 0 || nx >= m_width || ny < 0 || ny >= m_height)
         continue; // poza granicami
-      if (m_textureData[ny * m_width + nx] != 0)
+      if (m_textureData[ny * m_width + nx] != 0 && visited.find({nx, ny}) == visited.end())
       {
         foundDir = nd;
         x = nx;
         y = ny;
+        visited.insert({x, y});
         path.emplace_back(getValue(static_cast<float>(y) / (m_height - 1), static_cast<float>(x) / (m_width - 1)));
         dir = nd;
         break;
@@ -233,14 +237,6 @@ std::vector<math137::Vector3f> Intersectable::extractContour(int sx, int sy) con
   } while (!(x == sx && y == sy && path.size() > 1));
 
   return path;
-}
-std::vector<std::vector<math137::Vector3f>> Intersectable::extractAllContours() const
-{
-  auto [sx1, sy1] = findFirstContourPoint(1, 1);
-  auto contour1 = extractContour(sx1, sy1);
-  auto [sx2, sy2] = findFirstContourPoint(300, 110);
-  auto contour2 = extractContour(sx2, sy2);
-  return {contour1, contour2};
 }
 
 std::pair<int, int> Intersectable::findFirstContourPoint(int startX, int startY) const

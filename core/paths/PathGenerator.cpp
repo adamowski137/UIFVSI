@@ -5,11 +5,16 @@
 #include <utility>
 #include <cmath>
 #include <execution>
+#include "../serialize/Parser.hpp"
 #include "../models/curves/IntersectionCurve.hpp"
-PathGenerator::PathGenerator() : m_groundSurface(std::make_shared<FlatSurface>(
+PathGenerator::PathGenerator() : m_flatGroundSurface(std::make_shared<FlatSurface>(
                                      (Config::BLOCK_WIDTH + 6 * Config::FLAT_BLADE_RADIUS) * Config::SCALE,
                                      (Config::BLOCK_DEPTH + 6 * Config::FLAT_BLADE_RADIUS) * Config::SCALE,
-                                     math137::Vector3f(-(Config::BLOCK_WIDTH + 6 * Config::FLAT_BLADE_RADIUS) * Config::SCALE * 0.5f, 0.1f, -(Config::BLOCK_DEPTH + 6 * Config::FLAT_BLADE_RADIUS) * Config::SCALE * 0.5f)))
+                                     math137::Vector3f(-(Config::BLOCK_WIDTH + 6 * Config::FLAT_BLADE_RADIUS) * Config::SCALE * 0.5f, 0.f, -(Config::BLOCK_DEPTH + 6 * Config::FLAT_BLADE_RADIUS) * Config::SCALE * 0.5f))),
+                                 m_detailGroundSurface(std::make_shared<FlatSurface>(
+                                     (Config::BLOCK_WIDTH + 6 * Config::BALL_BLADE_RADIUS) * Config::SCALE,
+                                     (Config::BLOCK_DEPTH + 6 * Config::BALL_BLADE_RADIUS) * Config::SCALE,
+                                     math137::Vector3f(-(Config::BLOCK_WIDTH + 6 * Config::BALL_BLADE_RADIUS) * Config::SCALE * 0.5f, 0.f, -(Config::BLOCK_DEPTH + 6 * Config::BALL_BLADE_RADIUS) * Config::SCALE * 0.5f)))
 {
 }
 
@@ -77,7 +82,7 @@ std::vector<std::vector<float>> PathGenerator::generateHeightMap()
         math137::Vector3f pos = surface->getValue(u, v);
         math137::Vector3f du = surface->uDerivative(u, v);
         math137::Vector3f dv = surface->vDerivative(u, v);
-        if (du * du < 1e-12 || dv * dv < 1e-12)
+        if (du * du < 1e-8 || dv * dv < 1e-8)
           continue;
 
         auto [i, j] = Config::CoordinateToHeightMapIndex(pos.x(), pos.z());
@@ -176,47 +181,15 @@ void PathGenerator::createMillingSurface(
   for (const auto &[i, j] : surfacePairs)
     manager->addIntersection(m_detailSurfaces[i], m_detailSurfaces[j], false, 0.001f);
 
-  std::vector<std::tuple<int, int, bool>> trimmingPairs = {
-      {250, 400, false}, {0, 0, false}, {0, 0, false}, {288, 55, false}, {250, 170, false}, {500, 0, true}, {0, 0, false}, {45, 50, false}, {500, 0, false}, {0, 0, false}, {0, 0, false}, {330, 70, false}, {175, 175, false}, {500, 0, false}, {175, 300, false}, {500, 0, false}, {0, 0, false}, {400, 0, false}, {-1, -1, false}, {-1, -1, false}};
-  int idx = 0;
-  for (const auto &obj : manager->getObjects())
+  for (int i = 0; i < m_detailSurfaces.size() - 2; i++)
   {
-    if (auto curve = std::dynamic_pointer_cast<IntersectionCurve>(obj))
-    {
-      if (std::get<0>(trimmingPairs[idx]) != -1)
-      {
-        if (std::get<2>(trimmingPairs[idx]))
-        {
-          curve->intersectTrimmingTexture(std::get<0>(trimmingPairs[idx]), std::get<1>(trimmingPairs[idx]), 0);
-        }
-        else
-        {
-          curve->unionTrimmingTexture(std::get<0>(trimmingPairs[idx]), std::get<1>(trimmingPairs[idx]), 0);
-        }
-      }
-      idx++;
-      if (std::get<0>(trimmingPairs[idx]) != -1)
-      {
-        if (std::get<2>(trimmingPairs[idx]))
-        {
-          curve->intersectTrimmingTexture(std::get<0>(trimmingPairs[idx]), std::get<1>(trimmingPairs[idx]), 1);
-        }
-        else
-        {
-          curve->unionTrimmingTexture(std::get<0>(trimmingPairs[idx]), std::get<1>(trimmingPairs[idx]), 1);
-        }
-        curve->unionTrimmingTexture(std::get<0>(trimmingPairs[idx]), std::get<1>(trimmingPairs[idx]), 1);
-      }
-      idx++;
-    }
+    manager->addIntersection(m_detailSurfaces[i], m_detailGroundSurface, false, 0.001f);
   }
 
-  for (const auto &surface : m_flatSurfaces)
+  for (int i = 0; i < m_flatSurfaces.size() - 2; i++)
   {
-    manager->addIntersection(surface, m_groundSurface, false, 0.001f);
+    manager->addIntersection(m_flatSurfaces[i], m_flatGroundSurface, false, 0.001f);
   }
-  manager->m_cursor.setTranslation({-6.3f, 0.3f, 3.695f});
-  manager->addIntersection(m_flatSurfaces[3], m_groundSurface, true, 0.001f);
 }
 
 std::vector<std::vector<math137::Vector3f>>
@@ -277,7 +250,7 @@ PathGenerator::generateBallSegments(const std::unique_ptr<SceneManager> &manager
           wasInTrimmedRegion = true;
         }
 
-        math137::Vector3f pos = math137::Vector3f(0.f, Config::BASE_HEIGHT, 0.f) + surface->getValue(u, v) / Config::SCALE;
+        math137::Vector3f pos = math137::Vector3f(0.f, Config::BASE_HEIGHT + 2.1f, 0.f) + surface->getValue(u, v) / Config::SCALE;
         if (pos.y() < Config::BASE_HEIGHT + Config::BALL_BLADE_RADIUS || pos.any(
                                                                              [](float coord)
                                                                              { return std::isnan(coord) || std::isinf(coord); }))
@@ -351,7 +324,7 @@ std::vector<std::vector<math137::Vector3f>> PathGenerator::generateFlatSegments(
 
     for (float v = vStart; pred(v, vStop); v = inc(v, stepV))
     {
-      if (!m_groundSurface->isTrimmedUV(u, v))
+      if (!m_flatGroundSurface->isTrimmedUV(u, v))
       {
         if (segmentPoints.size() > 0)
         {
@@ -360,7 +333,7 @@ std::vector<std::vector<math137::Vector3f>> PathGenerator::generateFlatSegments(
         }
         continue;
       }
-      math137::Vector3f pos = m_groundSurface->getValue(u, v) / Config::SCALE;
+      math137::Vector3f pos = m_flatGroundSurface->getValue(u, v) / Config::SCALE;
       pos.y(Config::BASE_HEIGHT + 2.f);
 
       segmentPoints.emplace_back(pos);
@@ -370,15 +343,15 @@ std::vector<std::vector<math137::Vector3f>> PathGenerator::generateFlatSegments(
   if (!segmentPoints.empty())
     segments.emplace_back(std::move(segmentPoints));
 
-  auto silhouetteSegment = generateSilhouetteSegment(manager);
+  auto silhouetteSegment = generateFlatSilhouetteSegment();
   segments.insert(segments.end(), silhouetteSegment.begin(), silhouetteSegment.end());
 
   return segments;
 }
 
-std::vector<std::vector<math137::Vector3f>> PathGenerator::generateSilhouetteSegment(const std::unique_ptr<SceneManager> &manager)
+std::vector<std::vector<math137::Vector3f>> PathGenerator::generateFlatSilhouetteSegment()
 {
-  auto contours = m_groundSurface->extractAllContours();
+  std::vector<std::vector<math137::Vector3f>> contours = {m_flatGroundSurface->extractContour(0, 0), m_flatGroundSurface->extractContour(300, 110)};
   std::vector<std::vector<math137::Vector3f>> silhouette;
   for (auto &contour : contours)
   {
@@ -389,12 +362,39 @@ std::vector<std::vector<math137::Vector3f>> PathGenerator::generateSilhouetteSeg
   return silhouette;
 }
 
+std::vector<std::vector<math137::Vector3f>> PathGenerator::generateDetailSilhouetteSegment()
+{
+  auto configValues = Parser::ParseConfig("C:/Users/adam/Desktop/projekty/UIFVSI/core/config/contours.txt");
+  std::vector<std::vector<math137::Vector3f>> contours;
+  for (const auto &[idx, x, y] : configValues)
+  {
+    auto contour = m_detailSurfaces[idx]->extractContour(x, y);
+    std::transform(contour.begin(), contour.end(), contour.begin(), [](const math137::Vector3f &pos)
+                   { return pos / Config::SCALE + math137::Vector3f(0.f, Config::BASE_HEIGHT + 2.1f, 0.f); });
+    contours.emplace_back(std::move(contour));
+  }
+  return contours;
+}
+
+void PathGenerator::generateDetailTrimmingSegment(){
+
+  auto configValues = Parser::ParseConfig("C:/Users/adam/Desktop/projekty/UIFVSI/core/config/detail.txt");
+  for (const auto &[idx, x, y] : configValues)
+  {
+    m_detailSurfaces[idx]->unionTrimmingTexture(x, y);
+  }
+}
+
 std::vector<math137::Vector3f>
 PathGenerator::generateBallPath(const std::unique_ptr<SceneManager> &manager)
 {
+  generateDetailTrimmingSegment();
   std::vector<math137::Vector3f> pathPoints;
-  auto objects = manager->getDrawableObjects();
   auto segments = generateBallSegments(manager);
+  //std::vector<std::vector<math137::Vector3f>> segments;
+  auto silhouetteSegment = generateDetailSilhouetteSegment();
+
+  segments.insert(segments.end(), silhouetteSegment.begin(), silhouetteSegment.end());
 
   for (const auto &segment : segments)
   {
@@ -413,6 +413,7 @@ PathGenerator::generateBallPath(const std::unique_ptr<SceneManager> &manager)
     }
     pathPoints.insert(pathPoints.end(), segment.begin(), segment.end());
   }
+
   return pathPoints;
 }
 

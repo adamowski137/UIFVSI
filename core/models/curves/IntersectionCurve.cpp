@@ -235,12 +235,12 @@ bool IntersectionCurve::renderObjectMenu() {
     ImGui::InputInt2("Pixel ", pos);
     if (ImGui::Button("Union Trim 1")) {
       if (auto s = m_intersectable1.lock())
-        s->unionTrimmingTexture(m_intersectable1.lock()->m_textureData, pos[0], pos[1]);
+        s->unionTrimmingTexture(pos[0], pos[1]);
     }
     ImGui::SameLine();
     if (ImGui::Button("Intersect Trim 1")) {
       if (auto s = m_intersectable1.lock())
-        s->intersectTrimmingTexture(m_intersectable1.lock()->m_textureData, pos[0], pos[1]);
+        s->intersectTrimmingTexture(pos[0], pos[1]);
     }
     ImGui::SameLine();
     if (ImGui::Button("Reset trimming")) {
@@ -271,12 +271,12 @@ bool IntersectionCurve::renderObjectMenu() {
     ImGui::InputInt2("Pixel ", pos);
     if (ImGui::Button("Union Trim 2")) {
       if (auto s = m_intersectable2.lock())
-        s->unionTrimmingTexture(m_intersectable2.lock()->m_textureData, pos[0], pos[1]);
+        s->unionTrimmingTexture(pos[0], pos[1]);
     }
     ImGui::SameLine();
     if (ImGui::Button("Intersect Trim 2")) {
       if (auto s = m_intersectable2.lock())
-        s->intersectTrimmingTexture(m_intersectable2.lock()->m_textureData, pos[0], pos[1]);
+        s->intersectTrimmingTexture(pos[0], pos[1]);
     }
     ImGui::SameLine();
     if (ImGui::Button("Reset trimming")) {
@@ -299,7 +299,7 @@ void IntersectionCurve::unionTrimmingTexture(uint16_t x, uint16_t y, uint8_t sur
   if (surfaceIndex >= 2)
     return;
   if (auto s = (surfaceIndex == 0 ? m_intersectable1.lock() : m_intersectable2.lock()))
-    s->unionTrimmingTexture(s->m_textureData, x, y);
+    s->unionTrimmingTexture(x, y);
 }
 
 void IntersectionCurve::intersectTrimmingTexture(uint16_t x, uint16_t y, uint8_t surfaceIndex)
@@ -307,5 +307,5 @@ void IntersectionCurve::intersectTrimmingTexture(uint16_t x, uint16_t y, uint8_t
   if (surfaceIndex >= 2)
     return;
   if (auto s = (surfaceIndex == 0 ? m_intersectable1.lock() : m_intersectable2.lock()))
-    s->intersectTrimmingTexture(s->m_textureData, x, y);
+    s->intersectTrimmingTexture(x, y);
 }
