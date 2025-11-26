@@ -17,7 +17,7 @@ public:
 private:
     std::vector<std::vector<math137::Vector3f>> generateFlatSilhouetteSegment();
     std::vector<std::vector<math137::Vector3f>> generateDetailSilhouetteSegment();
-    void generateDetailTrimmingSegment();
+    void generateDetailTrimming();
     void remapPoints(const std::vector<std::weak_ptr<Object>> &objects);
     std::vector<std::vector<float>> generateHeightMap();
     std::vector<std::shared_ptr<ShiftedSurface>> m_detailSurfaces;

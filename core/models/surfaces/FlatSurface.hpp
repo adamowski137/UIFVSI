@@ -14,7 +14,7 @@ public:
     math137::Vector3f virtual uDerivative(float u, float v) const override;
     math137::Vector3f virtual vDerivative(float u, float v) const override;
     math137::Vector3f virtual getValue(float u, float v) const override;
-
+    
 private:
     float m_width;
     float m_depth;

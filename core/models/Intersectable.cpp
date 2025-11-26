@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <stack>
 #include <set>
+#include <iostream>
 
 Intersectable::Intersectable()
 {
@@ -192,18 +193,17 @@ bool Intersectable::isTrimmedUV(float u, float v) const
 }
 std::vector<math137::Vector3f> Intersectable::extractContour(int sx, int sy) const
 {
+  std::vector<uint8_t> temp = m_textureData;
   constexpr int nx8[8] = {1, 1, 0, -1, -1, -1, 0, 1};
   constexpr int ny8[8] = {0, 1, 1, 1, 0, -1, -1, -1};
 
   std::vector<math137::Vector3f> path;
-  std::set<std::pair<int, int>> visited;
 
   int dir = 0;
   auto [x, y] = findFirstContourPoint(sx, sy);
   if (x == -1 || y == -1)
     return path; // brak punktów konturu
   path.emplace_back(getValue(static_cast<float>(y) / (m_height - 1), static_cast<float>(x) / (m_width - 1)));
-  visited.insert({x, y});
   do
   {
     int startDir = (dir + 6) % 8; // 6 = -90° w Moore grid (8 kierunków)
@@ -214,15 +214,19 @@ std::vector<math137::Vector3f> Intersectable::extractContour(int sx, int sy) con
       int nd = (startDir + i) % 8;
       int nx = x + nx8[nd];
       int ny = y + ny8[nd];
-      if (nx < 0 || nx >= m_width || ny < 0 || ny >= m_height)
+      if((x < 0 || x >= m_width) && !wrappableV())
         continue; // poza granicami
-      if (m_textureData[ny * m_width + nx] != 0 && visited.find({nx, ny}) == visited.end())
+      if((y < 0 || y >= m_height) && !wrappableU())
+        continue; // poza granicami
+      nx = (nx + m_width) % m_width;
+      ny = (ny + m_height) % m_height;
+      if (temp[ny * m_width + nx] != 0)
       {
         foundDir = nd;
         x = nx;
         y = ny;
-        visited.insert({x, y});
         path.emplace_back(getValue(static_cast<float>(y) / (m_height - 1), static_cast<float>(x) / (m_width - 1)));
+        temp[ny * m_width + nx] = 0;
         dir = nd;
         break;
       }
@@ -259,4 +263,165 @@ std::pair<int, int> Intersectable::findFirstContourPoint(int startX, int startY)
   }
 
   return std::pair<int, int>(sx, sy);
+}
+
+std::vector<std::vector<math137::Vector3f>> Intersectable::extractPaths(int step) const
+{
+  std::vector<std::vector<math137::Vector3f>> res;
+  std::vector<uint8_t> temp = m_trimmingData;
+  for (int y = 0; y < m_height; y += step)
+  {
+    for (int x = 0; x < m_width; x += step)
+    {
+      if (temp[y * m_width + x] != 0)
+        continue;
+
+      auto path = extractPath(x, y, temp, step);
+      if (path.size() > 2)
+      {
+        res.push_back(path);
+      }
+    }
+  }
+  return res;
+}
+
+std::vector<math137::Vector3f> Intersectable::extractPath(int x, int y, std::vector<uint8_t> &temp, int step) const
+{
+  struct State
+  {
+    int x;
+    int y;
+    int dir;
+    int wall;
+  };
+
+  std::vector<math137::Vector3f> path;
+  std::stack<State> s;
+  s.push({x, y, step, 1});
+  int yMul = 1;
+  while (!s.empty())
+  {
+    auto state = s.top();
+    s.pop();
+
+    float u = static_cast<float>(state.y) / (m_height - 1);
+    float v = static_cast<float>(state.x) / (m_width - 1);
+    math137::Vector3f pos = getValue(u, v);
+    math137::Vector3f du = uDerivative(u, v);
+    math137::Vector3f dv = vDerivative(u, v);
+
+    math137::Vector3f normal = math137::Vector3f::Cross(du, dv);
+    normal.normalize();
+
+   if (normal.y() < 0.01f || normal.any(
+                                 [](float coord)
+                                 { return std::isnan(coord) || std::isinf(coord); }))
+   {
+     temp[state.y * m_width + state.x] = 255; // oznacz jako odwiedzony
+     continue;
+   }
+
+    if (temp[state.y * m_width + state.x] != 0 && state.wall == 0)
+      continue;
+
+    path.emplace_back(pos);
+    temp[state.y * m_width + state.x] = 255; // oznacz jako odwiedzony
+    int nx = state.x + state.dir;
+    int ny = state.y + step * yMul;
+    if (ny >= 0 && ny < m_height && state.wall == 2 && temp[ny * m_width + state.x] != 0)
+    {
+      s.push({state.x, ny, -state.dir, 0});
+      continue;
+    }
+    if (nx >= 0 && nx < m_width && m_trimmingData[state.y * m_width + nx] == 0)
+    {
+      s.push({nx, state.y, state.dir, state.wall});
+      continue;
+    }
+
+    if (state.wall == 2 && yMul > 0)
+    {
+      yMul = -yMul;
+      std::vector<math137::Vector3f> tmpPath;
+      ny = state.y + step * yMul;
+      while(ny >= 0 && ny < m_height && temp[ny * m_width + state.x] != 0 && m_trimmingData[ny * m_width + state.x] == 0)
+      {
+        float u = static_cast<float>(ny) / (m_height - 1);
+        float v = static_cast<float>(state.x) / (m_width - 1);
+        math137::Vector3f pos = getValue(u, v);
+        tmpPath.emplace_back(pos);
+        temp[ny * m_width + state.x] = 255;
+        ny += step * yMul;
+      }
+      if(temp[ny * m_width + state.x] != 0){
+        path.insert(path.end(), tmpPath.begin(), tmpPath.end());
+        s.push({state.x, state.y, -state.dir, 0});
+      }
+    }
+    else if (state.wall == 1)
+    {
+      if (ny >= 0 && ny < m_height && temp[ny * m_width + state.x] == 0)
+      {
+        s.push({state.x, ny, -state.dir, 0});
+        continue;
+      }
+
+      s.push({state.x, state.y, -state.dir, 2});
+      continue;
+    }
+    else if (state.wall == 0)
+    {
+      s.push({state.x, state.y, -state.dir, 1});
+    }
+  }
+  return path;
+}
+
+std::vector<math137::Vector3f> Intersectable::gridMillingPath(float stepU, float stepV) const
+{
+    std::vector<math137::Vector3f> path;
+    bool direction = true;
+    for (float v = 0.0f; v <= 1.0f; v += stepV)
+    {
+        if (direction)
+        {
+            for (float u = 0.0f; u <= 1.0f; u += stepU)
+            {
+                if(!isTrimmedUV(u, v))
+                    path.push_back(getValue(u, v));
+            }
+        }
+        else
+        {
+            for (float u = 1.0f; u >= 0.0f; u -= stepU)
+            {
+                if(!isTrimmedUV(u, v))
+                    path.push_back(getValue(u, v));
+            }
+        }
+        direction = !direction;
+    }
+    for (float u = 0.0f; u <= 1.0f; u += stepU)
+    {
+        if (direction)
+        {
+            for (float v = 0.0f; v <= 1.0f; v += stepV)
+            {
+                if(!isTrimmedUV(u, v))
+                    path.push_back(getValue(u, v));
+            }
+        }
+        else
+        {
+            for (float v = 1.0f; v >= 0.0f; v -= stepV)
+            {
+                if(!isTrimmedUV(u, v))
+                    path.push_back(getValue(u, v));
+            }
+        }
+        direction = !direction;
+    }
+
+    return path;
 }
