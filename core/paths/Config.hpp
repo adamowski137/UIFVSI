@@ -12,7 +12,9 @@ public:
   static constexpr float BASE_HEIGHT = 15.f;
   static constexpr float SAMPLING_DISTANCE_ROUGH = .01f;
   static constexpr float SAMPLING_DISTANCE_BALL = .01f;
-  static constexpr uint32_t HEIGHT_MAP_RESOLUTION = 20;
+  static constexpr uint32_t HEIGHT_MAP_RESOLUTION_Y = 20;
+  static constexpr uint32_t HEIGHT_MAP_RESOLUTION_X = 100;
+  static constexpr float HEIGHT_MAP_OFFSET = 20.f;
   static constexpr float BALL_BLADE_RADIUS = 4.f;
   static constexpr float FLAT_BLADE_RADIUS = 5.f;
   static constexpr float TRAVEL_CLEARANCE = BLOCK_HEIGHT;

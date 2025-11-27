@@ -11,8 +11,8 @@ public:
     std::vector<math137::Vector3f> generatePath(const std::unique_ptr<SceneManager> &manager);
     std::vector<math137::Vector3f> generateBallPath(const std::unique_ptr<SceneManager> &manager);
     std::vector<math137::Vector3f> generateFlatPath(const std::unique_ptr<SceneManager> &manager);
-    std::vector<std::vector<math137::Vector3f>> generateBallSegments(const std::unique_ptr<SceneManager> &manager);
-    std::vector<std::vector<math137::Vector3f>> generateFlatSegments(const std::unique_ptr<SceneManager> &manager);
+    std::vector<std::vector<math137::Vector3f>> generateBallSegments();
+    std::vector<std::vector<math137::Vector3f>> generateFlatSegments();
     void createMillingSurface(const std::unique_ptr<SceneManager> &manager, float radius);
 private:
     std::vector<std::vector<math137::Vector3f>> generateFlatSilhouetteSegment();

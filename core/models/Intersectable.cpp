@@ -308,12 +308,16 @@ std::vector<math137::Vector3f> Intersectable::extractPath(int x, int y, std::vec
     float u = static_cast<float>(state.y) / (m_height - 1);
     float v = static_cast<float>(state.x) / (m_width - 1);
     math137::Vector3f pos = getValue(u, v);
+    if(pos.y() < 0.0f){
+      temp[state.y * m_width + state.x] = 255; // oznacz jako odwiedzony
+      continue;
+    }
+
     math137::Vector3f du = uDerivative(u, v);
     math137::Vector3f dv = vDerivative(u, v);
 
     math137::Vector3f normal = math137::Vector3f::Cross(du, dv);
     normal.normalize();
-
    if (normal.y() < 0.01f || normal.any(
                                  [](float coord)
                                  { return std::isnan(coord) || std::isinf(coord); }))
@@ -329,6 +333,10 @@ std::vector<math137::Vector3f> Intersectable::extractPath(int x, int y, std::vec
     temp[state.y * m_width + state.x] = 255; // oznacz jako odwiedzony
     int nx = state.x + state.dir;
     int ny = state.y + step * yMul;
+    if(wrappableU())
+      ny = (ny + m_height) % m_height;
+    if(wrappableV())
+      nx = (nx + m_width) % m_width;
     if (ny >= 0 && ny < m_height && state.wall == 2 && temp[ny * m_width + state.x] != 0)
     {
       s.push({state.x, ny, -state.dir, 0});

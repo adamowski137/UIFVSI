@@ -15,7 +15,7 @@ PathGenerator::PathGenerator() : m_flatGroundSurface(std::make_shared<FlatSurfac
                                  m_detailGroundSurface(std::make_shared<FlatSurface>(
                                      (Config::BLOCK_WIDTH + 6 * Config::BALL_BLADE_RADIUS) * Config::SCALE,
                                      (Config::BLOCK_DEPTH + 6 * Config::BALL_BLADE_RADIUS) * Config::SCALE,
-                                     math137::Vector3f(-(Config::BLOCK_WIDTH + 6 * Config::BALL_BLADE_RADIUS) * Config::SCALE * 0.5f, 0.f, -(Config::BLOCK_DEPTH + 6 * Config::BALL_BLADE_RADIUS) * Config::SCALE * 0.5f)))
+                                     math137::Vector3f(-(Config::BLOCK_WIDTH + 6 * Config::BALL_BLADE_RADIUS) * Config::SCALE * 0.5f, 0.0f, -(Config::BLOCK_DEPTH + 6 * Config::BALL_BLADE_RADIUS) * Config::SCALE * 0.5f)))
 {
 }
 
@@ -72,8 +72,8 @@ void PathGenerator::remapPoints(
 std::vector<std::vector<float>> PathGenerator::generateHeightMap()
 {
   std::vector<std::vector<float>> heightMap(
-      Config::HEIGHT_MAP_RESOLUTION,
-      std::vector<float>(Config::HEIGHT_MAP_RESOLUTION, 0.f));
+      Config::HEIGHT_MAP_RESOLUTION_X,
+      std::vector<float>(Config::HEIGHT_MAP_RESOLUTION_Y, 0.f));
   for (const auto &surface : m_roughSurfaces)
   {
     for (float u = 0; u <= 1.0f; u += Config::SAMPLING_DISTANCE_ROUGH)
@@ -100,20 +100,16 @@ std::vector<std::vector<float>> PathGenerator::generateHeightMap()
 std::vector<math137::Vector3f>
 PathGenerator::generatePath(const std::unique_ptr<SceneManager> &manager)
 {
-  //remapPoints(manager->getDrawableObjects());
+  // remapPoints(manager->getDrawableObjects());
   std::vector<math137::Vector3f> pathPoints;
   auto heightMap = generateHeightMap();
 
-  const uint32_t N = Config::HEIGHT_MAP_RESOLUTION;
-  if (N < 2)
-    return pathPoints;
-
   auto emitPoint = [&](uint32_t i, uint32_t j, float minHeight)
   {
-    float x = ((float(i) / (N - 1)) * Config::BLOCK_WIDTH * Config::SCALE) -
-              (Config::BLOCK_WIDTH * Config::SCALE * 0.5f);
-    float z = ((float(j) / (N - 1)) * Config::BLOCK_DEPTH * Config::SCALE) -
-              (Config::BLOCK_DEPTH * Config::SCALE * 0.5f);
+    float x = ((float(i) / (Config::HEIGHT_MAP_RESOLUTION_X - 1)) * ( (Config::BLOCK_WIDTH + Config::HEIGHT_MAP_OFFSET) * Config::SCALE) 
+    - ((Config::BLOCK_WIDTH + Config::HEIGHT_MAP_OFFSET) * Config::SCALE * 0.5f));
+    float z = ((float(j) / (Config::HEIGHT_MAP_RESOLUTION_Y - 1)) * ( (Config::BLOCK_DEPTH + Config::HEIGHT_MAP_OFFSET) * Config::SCALE)
+    - ((Config::BLOCK_DEPTH + Config::HEIGHT_MAP_OFFSET) * Config::SCALE * 0.5f));
     float h = heightMap[i][j] / Config::SCALE + Config::BASE_HEIGHT + 2.f;
     float finalHeight = std::max(h, minHeight);
     pathPoints.emplace_back(x / Config::SCALE, finalHeight, z / Config::SCALE);
@@ -124,8 +120,8 @@ PathGenerator::generatePath(const std::unique_ptr<SceneManager> &manager)
     float minHeight = Config::BASE_HEIGHT + 2.f +
                       (Config::BLOCK_HEIGHT - Config::BASE_HEIGHT) * 0.5f * (1 - it);
 
-    int jStart = (it == 0 ? 0 : int(N) - 1);
-    int jStop = (it == 0 ? int(N) - 1 : 0);
+    int jStart = (it == 0 ? 0 : int(Config::HEIGHT_MAP_RESOLUTION_Y) - 1);
+    int jStop = (it == 0 ? int(Config::HEIGHT_MAP_RESOLUTION_Y) - 1 : 0);
     std::function jPred = std::less_equal<int>();
     if (it != 0)
       jPred = std::greater_equal<int>();
@@ -138,8 +134,8 @@ PathGenerator::generatePath(const std::unique_ptr<SceneManager> &manager)
 
     for (int j = jStart; jPred(j, jStop); j = jInc(j))
     {
-      int iStart = forward ? 0 : int(N) - 1;
-      int iStop = forward ? int(N) - 1 : 0;
+      int iStart = forward ? 0 : int(Config::HEIGHT_MAP_RESOLUTION_X) - 1;
+      int iStop = forward ? int(Config::HEIGHT_MAP_RESOLUTION_X) - 1 : 0;
       std::function iPred = std::less_equal<int>();
       if (!forward)
         iPred = std::greater_equal<int>();
@@ -170,6 +166,8 @@ void PathGenerator::createMillingSurface(
       {
         m_detailSurfaces.push_back(std::make_shared<ShiftedSurface>(
             surface, radius * Config::SCALE));
+        //m_roughSurfaces.push_back(std::make_shared<ShiftedSurface>(
+        //    surface, Config::ROUGH_BLADE_RADIUS * Config::SCALE));
         m_roughSurfaces.push_back(std::make_shared<ShiftedSurface>(
             surface, Config::ROUGH_BLADE_RADIUS * Config::SCALE));
         m_flatSurfaces.push_back(std::make_shared<ShiftedSurface>(
@@ -193,7 +191,7 @@ void PathGenerator::createMillingSurface(
 }
 
 std::vector<std::vector<math137::Vector3f>>
-PathGenerator::generateBallSegments(const std::unique_ptr<SceneManager> &manager)
+PathGenerator::generateBallSegments()
 {
   std::vector<std::vector<math137::Vector3f>> segments;
   for (const auto &surface : m_detailSurfaces)
@@ -210,7 +208,7 @@ PathGenerator::generateBallSegments(const std::unique_ptr<SceneManager> &manager
   return segments;
 }
 
-std::vector<std::vector<math137::Vector3f>> PathGenerator::generateFlatSegments(const std::unique_ptr<SceneManager> &manager)
+std::vector<std::vector<math137::Vector3f>> PathGenerator::generateFlatSegments()
 {
   std::vector<std::vector<math137::Vector3f>> segments;
 
@@ -252,7 +250,7 @@ std::vector<std::vector<math137::Vector3f>> PathGenerator::generateFlatSegments(
 
     for (float v = vStart; pred(v, vStop); v = inc(v, stepV))
     {
-      if (!m_flatGroundSurface->isTrimmedUV(u, v))
+      if (m_flatGroundSurface->isTrimmedUV(u, v))
       {
         if (segmentPoints.size() > 0)
         {
@@ -273,15 +271,12 @@ std::vector<std::vector<math137::Vector3f>> PathGenerator::generateFlatSegments(
 
   auto silhouetteSegment = generateFlatSilhouetteSegment();
   segments.insert(segments.end(), silhouetteSegment.begin(), silhouetteSegment.end());
-  auto infillsegment = m_flatGroundSurface->gridMillingPath(0.01f, 0.01f);
-  std::transform(infillsegment.begin(), infillsegment.end(), infillsegment.begin(), [](const math137::Vector3f &pos)
-                 { return pos / Config::SCALE + math137::Vector3f(0.f, Config::BASE_HEIGHT + 2.f, 0.f); });
   return segments;
 }
 
 std::vector<std::vector<math137::Vector3f>> PathGenerator::generateFlatSilhouetteSegment()
 {
-  std::vector<std::vector<math137::Vector3f>> contours = {m_flatGroundSurface->extractContour(0, 0) };
+  std::vector<std::vector<math137::Vector3f>> contours = {m_flatGroundSurface->extractContour(1, 1)};
   std::vector<std::vector<math137::Vector3f>> silhouette;
   for (auto &contour : contours)
   {
@@ -306,7 +301,8 @@ std::vector<std::vector<math137::Vector3f>> PathGenerator::generateDetailSilhoue
   return contours;
 }
 
-void PathGenerator::generateDetailTrimming(){
+void PathGenerator::generateDetailTrimming()
+{
 
   auto configValues = Parser::ParseConfig("C:/Users/adam/Desktop/projekty/UIFVSI/core/config/detail.txt");
   for (const auto &[idx, x, y] : configValues)
@@ -320,7 +316,7 @@ PathGenerator::generateBallPath(const std::unique_ptr<SceneManager> &manager)
 {
   generateDetailTrimming();
   std::vector<math137::Vector3f> pathPoints;
-  auto segments = generateBallSegments(manager);
+  auto segments = generateBallSegments();
   m_detailGroundSurface->unionTrimmingTexture(1, 1);
   m_detailGroundSurface->unionTrimmingTexture(134, 404);
   m_detailGroundSurface->unionTrimmingTexture(270, 333);
@@ -332,11 +328,14 @@ PathGenerator::generateBallPath(const std::unique_ptr<SceneManager> &manager)
   m_detailGroundSurface->unionTrimmingTexture(333, 211);
 
   auto ground = m_detailGroundSurface->gridMillingPath(0.01f, 0.01f);
-  //auto ground = m_detailGroundSurface->extractContour(300, 110);
+  auto groundSilhouette = m_detailGroundSurface->extractContour(300, 110);
   std::transform(ground.begin(), ground.end(), ground.begin(), [](const math137::Vector3f &pos)
-                { return pos / Config::SCALE + math137::Vector3f(0.f, Config::BASE_HEIGHT + 2.f, 0.f); });
+                 { return pos / Config::SCALE + math137::Vector3f(0.f, Config::BASE_HEIGHT + 2.f, 0.f); });
+  std::transform(groundSilhouette.begin(), groundSilhouette.end(), groundSilhouette.begin(), [](const math137::Vector3f &pos)
+                 { return pos / Config::SCALE + math137::Vector3f(0.f, Config::BASE_HEIGHT + 2.f, 0.f); });
   segments.emplace_back(std::move(ground));
-  //std::vector<std::vector<math137::Vector3f>> segments;
+  segments.emplace_back(std::move(groundSilhouette));
+  // std::vector<std::vector<math137::Vector3f>> segments;
   auto silhouetteSegment = generateDetailSilhouetteSegment();
 
   segments.insert(segments.end(), silhouetteSegment.begin(), silhouetteSegment.end());
@@ -366,7 +365,12 @@ std::vector<math137::Vector3f>
 PathGenerator::generateFlatPath(const std::unique_ptr<SceneManager> &manager)
 {
   std::vector<math137::Vector3f> pathPoints;
-  auto segment = generateFlatSegments(manager);
+  auto trimings = Parser::ParseConfig("C:/Users/adam/Desktop/projekty/UIFVSI/core/config/ground.txt");
+  for (const auto &[idx, x, y] : trimings)
+  {
+    m_flatGroundSurface->unionTrimmingTexture(x, y);
+  }
+  auto segment = generateFlatSegments();
 
   for (const auto &seg : segment)
   {
