@@ -17,7 +17,7 @@ public:
   static constexpr float HEIGHT_MAP_OFFSET = 20.f;
   static constexpr float BALL_BLADE_RADIUS = 4.f;
   static constexpr float FLAT_BLADE_RADIUS = 5.f;
-  static constexpr float TRAVEL_CLEARANCE = BLOCK_HEIGHT;
+  static constexpr float TRAVEL_CLEARANCE = 40.f;
   static constexpr float NORMAL_THRESHOLD = 0.1f;
   static std::pair<uint32_t, uint32_t>
   CoordinateToHeightMapIndex(const float x, const float z);

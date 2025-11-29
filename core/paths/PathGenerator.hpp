@@ -4,6 +4,7 @@
 #include "../SceneManager.hpp"
 #include "../models/surfaces/ShiftedSurface.hpp"
 #include "../models/surfaces/FlatSurface.hpp"
+#include "../models/curves/IntersectionCurve.hpp"
 
 class PathGenerator {
 public:
@@ -12,10 +13,10 @@ public:
     std::vector<math137::Vector3f> generateBallPath(const std::unique_ptr<SceneManager> &manager);
     std::vector<math137::Vector3f> generateFlatPath(const std::unique_ptr<SceneManager> &manager);
     std::vector<std::vector<math137::Vector3f>> generateBallSegments();
-    std::vector<std::vector<math137::Vector3f>> generateFlatSegments();
+    std::vector<std::vector<math137::Vector3f>> generateFlatSegments(const std::vector<std::shared_ptr<IntersectionCurve>>& curves);
     void createMillingSurface(const std::unique_ptr<SceneManager> &manager, float radius);
 private:
-    std::vector<std::vector<math137::Vector3f>> generateFlatSilhouetteSegment();
+    std::vector<math137::Vector3f> generateFlatSilhouetteSegment(const std::vector<std::shared_ptr<IntersectionCurve>>& curves);
     std::vector<std::vector<math137::Vector3f>> generateDetailSilhouetteSegment();
     void generateDetailTrimming();
     void remapPoints(const std::vector<std::weak_ptr<Object>> &objects);
