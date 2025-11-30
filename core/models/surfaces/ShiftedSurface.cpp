@@ -26,21 +26,19 @@ math137::Vector3f ShiftedSurface::uDerivative(float u, float v) const
   math137::Vector3f du = m_base->uDerivative(u, v);
   math137::Vector3f dv = m_base->vDerivative(u, v);
 
-  if(du * du < 1e-8f || dv * dv < 1e-8f)
-    return {0.f, 0.f, 0.f}; // avoid division by zero for degenerate cases
-
   // second derivatives
   math137::Vector3f duu = m_base->uuDerivative(u, v);
   math137::Vector3f duv = m_base->uvDerivative(u, v);
   math137::Vector3f dvv = m_base->vvDerivative(u, v);
+  
+  // derivatives of unnormalized normal
+  // d/du (du x dv) = duu x dv + du x duv
+  math137::Vector3f an_u = math137::Vector3f::Cross(duu, dv) + math137::Vector3f::Cross(du, duv);
 
   // unnormalized normal
   math137::Vector3f an = math137::Vector3f::Cross(du, dv);
   float norm = std::sqrt(an * an);
 
-  // derivatives of unnormalized normal
-  // d/du (du x dv) = duu x dv + du x duv
-  math137::Vector3f an_u = math137::Vector3f::Cross(duu, dv) + math137::Vector3f::Cross(du, duv);
   // derivative of normalized normal: (an_u / norm) - an * (an . an_u) / norm^3
   float norm3 = norm * norm * norm;
   math137::Vector3f dn_du = (an_u / norm) - (an * ((an * an_u) / norm3));
@@ -86,6 +84,12 @@ math137::Vector3f ShiftedSurface::getValue(float u, float v) const
   math137::Vector3f an = math137::Vector3f::Cross(du, dv);
   float norm = std::sqrt(an * an);
   math137::Vector3f n = an / norm;
+  if(n.any(
+                                 [](float coord)
+                                 { return std::isnan(coord) || std::isinf(coord); }))
+  {
+    n = math137::Vector3f(0,1,0); // default normal if undefined
+  }
   return p + n * m_radius;
 }
 

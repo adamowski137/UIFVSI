@@ -286,7 +286,7 @@ std::vector<std::vector<math137::Vector3f>> Intersectable::extractPaths(int step
   return res;
 }
 
-std::vector<math137::Vector3f> Intersectable::extractPath(int x, int y, std::vector<uint8_t> &temp, int step) const
+std::vector<math137::Vector3f> Intersectable::extractPath(int x, int y, std::vector<uint8_t> &temp, int step, bool checkYFirst) const
 {
   struct State
   {
@@ -308,73 +308,60 @@ std::vector<math137::Vector3f> Intersectable::extractPath(int x, int y, std::vec
     float u = static_cast<float>(state.y) / (m_height - 1);
     float v = static_cast<float>(state.x) / (m_width - 1);
     math137::Vector3f pos = getValue(u, v);
-    if(pos.y() < 0.0f){
-      temp[state.y * m_width + state.x] = 255; // oznacz jako odwiedzony
-      continue;
-    }
 
     math137::Vector3f du = uDerivative(u, v);
     math137::Vector3f dv = vDerivative(u, v);
 
     math137::Vector3f normal = math137::Vector3f::Cross(du, dv);
     normal.normalize();
-   if (normal.y() < 0.01f || normal.any(
-                                 [](float coord)
-                                 { return std::isnan(coord) || std::isinf(coord); }))
-   {
-     temp[state.y * m_width + state.x] = 255; // oznacz jako odwiedzony
-     continue;
-   }
 
     if (temp[state.y * m_width + state.x] != 0 && state.wall == 0)
       continue;
-
+   
+    if (!(normal.any(
+                                 [](float coord)
+                                 { return std::isnan(coord) || std::isinf(coord); })))
+   {
     path.emplace_back(pos);
+   }
+
     temp[state.y * m_width + state.x] = 255; // oznacz jako odwiedzony
     int nx = state.x + state.dir;
     int ny = state.y + step * yMul;
-    if(wrappableU())
+    if (wrappableU())
       ny = (ny + m_height) % m_height;
-    if(wrappableV())
+    if (wrappableV())
       nx = (nx + m_width) % m_width;
-    if (ny >= 0 && ny < m_height && state.wall == 2 && temp[ny * m_width + state.x] != 0)
+
+    bool canMoveX = (nx >= 0 && nx < m_width && m_trimmingData[state.y * m_width + nx] == 0);
+    bool canMoveY = (ny >= 0 && ny < m_height && temp[ny * m_width + state.x] == 0);
+
+    // If requested, when on wall==1 try vertical move first
+    if (checkYFirst && state.wall == 1 && canMoveY)
     {
       s.push({state.x, ny, -state.dir, 0});
       continue;
     }
-    if (nx >= 0 && nx < m_width && m_trimmingData[state.y * m_width + nx] == 0)
+
+    if (canMoveX)
     {
       s.push({nx, state.y, state.dir, state.wall});
       continue;
     }
 
+    // If not checked earlier, try vertical move when appropriate
+    if (!checkYFirst && state.wall == 1 && canMoveY)
+    {
+      s.push({state.x, ny, -state.dir, 0});
+      continue;
+    }
+
     if (state.wall == 2 && yMul > 0)
     {
-      yMul = -yMul;
-      std::vector<math137::Vector3f> tmpPath;
-      ny = state.y + step * yMul;
-      while(ny >= 0 && ny < m_height && temp[ny * m_width + state.x] != 0 && m_trimmingData[ny * m_width + state.x] == 0)
-      {
-        float u = static_cast<float>(ny) / (m_height - 1);
-        float v = static_cast<float>(state.x) / (m_width - 1);
-        math137::Vector3f pos = getValue(u, v);
-        tmpPath.emplace_back(pos);
-        temp[ny * m_width + state.x] = 255;
-        ny += step * yMul;
-      }
-      if(temp[ny * m_width + state.x] != 0){
-        path.insert(path.end(), tmpPath.begin(), tmpPath.end());
-        s.push({state.x, state.y, -state.dir, 0});
-      }
+      break;
     }
     else if (state.wall == 1)
     {
-      if (ny >= 0 && ny < m_height && temp[ny * m_width + state.x] == 0)
-      {
-        s.push({state.x, ny, -state.dir, 0});
-        continue;
-      }
-
       s.push({state.x, state.y, -state.dir, 2});
       continue;
     }

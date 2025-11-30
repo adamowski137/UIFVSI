@@ -29,7 +29,7 @@ public:
 
 protected:
   std::pair<int, int> findFirstContourPoint(int startX, int startY) const;
-  std::vector<math137::Vector3f> extractPath(int x, int y, std::vector<uint8_t>& temp, int step) const;
+  std::vector<math137::Vector3f> extractPath(int x, int y, std::vector<uint8_t>& temp, int step, bool checkYFirst = false) const;
 
   uint32_t m_trimmingTexture;
 };
