@@ -19,7 +19,7 @@ public:
   virtual void resetTrimming();
   virtual bool isTrimmedUV(float u, float v) const;
   std::vector<math137::Vector3f> extractContour(int sx, int sy) const;
-  std::vector<std::vector<math137::Vector3f>> extractPaths(int step) const;
+  std::vector<std::vector<math137::Vector3f>> extractPaths(int step, bool dir) const;
   std::vector<math137::Vector3f> gridMillingPath(float stepU, float stepV) const;
 
   std::vector<uint8_t> m_textureData;
@@ -29,7 +29,7 @@ public:
 
 protected:
   std::pair<int, int> findFirstContourPoint(int startX, int startY) const;
-  std::vector<math137::Vector3f> extractPath(int x, int y, std::vector<uint8_t>& temp, int step, bool checkYFirst = false) const;
+  std::vector<math137::Vector3f> extractPath(int x, int y, std::vector<uint8_t>& temp, int step, bool checkYFirst) const;
 
   uint32_t m_trimmingTexture;
 };

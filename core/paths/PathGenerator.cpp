@@ -13,9 +13,9 @@
 #include <stack>
 #include <fstream>
 PathGenerator::PathGenerator() : m_flatGroundSurface(std::make_shared<FlatSurface>(
-                                     (Config::BLOCK_WIDTH + 4 * Config::FLAT_BLADE_RADIUS) * Config::SCALE,
-                                     (Config::BLOCK_DEPTH + 4 * Config::FLAT_BLADE_RADIUS) * Config::SCALE,
-                                     math137::Vector3f(-(Config::BLOCK_WIDTH + 4 * Config::FLAT_BLADE_RADIUS) * Config::SCALE * 0.5f, 0.0f, -(Config::BLOCK_DEPTH + 4 * Config::FLAT_BLADE_RADIUS) * Config::SCALE * 0.5f))),
+                                     (Config::BLOCK_WIDTH + 1.5f * Config::FLAT_BLADE_RADIUS) * Config::SCALE,
+                                     (Config::BLOCK_DEPTH + 1.5f * Config::FLAT_BLADE_RADIUS) * Config::SCALE,
+                                     math137::Vector3f(-(Config::BLOCK_WIDTH + 1.5f * Config::FLAT_BLADE_RADIUS) * Config::SCALE * 0.5f, 0.0f, -(Config::BLOCK_DEPTH + 1.5f * Config::FLAT_BLADE_RADIUS) * Config::SCALE * 0.5f))),
                                  m_detailGroundSurface(std::make_shared<FlatSurface>(
                                      (Config::BLOCK_WIDTH + 6 * Config::BALL_BLADE_RADIUS) * Config::SCALE,
                                      (Config::BLOCK_DEPTH + 6 * Config::BALL_BLADE_RADIUS) * Config::SCALE,
@@ -112,14 +112,14 @@ PathGenerator::generatePath(const std::unique_ptr<SceneManager> &manager)
   {
     float x = ((float(i) / (Config::HEIGHT_MAP_RESOLUTION_X - 1)) * ((Config::BLOCK_WIDTH + Config::HEIGHT_MAP_OFFSET) * Config::SCALE) - ((Config::BLOCK_WIDTH + Config::HEIGHT_MAP_OFFSET) * Config::SCALE * 0.5f));
     float z = ((float(j) / (Config::HEIGHT_MAP_RESOLUTION_Y - 1)) * ((Config::BLOCK_DEPTH + Config::HEIGHT_MAP_OFFSET) * Config::SCALE) - ((Config::BLOCK_DEPTH + Config::HEIGHT_MAP_OFFSET) * Config::SCALE * 0.5f));
-    float h = heightMap[i][j] / Config::SCALE + Config::BASE_HEIGHT + 2.f;
+    float h = heightMap[i][j] / Config::SCALE + Config::BASE_HEIGHT + 2.3f;
     float finalHeight = std::max(h, minHeight);
     pathPoints.emplace_back(x / Config::SCALE, finalHeight, z / Config::SCALE);
   };
 
   for (int it = 0; it < 2; it++)
   {
-    float minHeight = Config::BASE_HEIGHT + 2.f +
+    float minHeight = Config::BASE_HEIGHT + 2.3f +
                       (Config::BLOCK_HEIGHT - Config::BASE_HEIGHT) * 0.5f * (1 - it);
 
     int jStart = (it == 0 ? 0 : int(Config::HEIGHT_MAP_RESOLUTION_Y) - 1);
@@ -196,13 +196,16 @@ std::vector<std::vector<math137::Vector3f>>
 PathGenerator::generateBallSegments()
 {
   std::vector<std::vector<math137::Vector3f>> segments;
-  for (const auto &surface : m_detailSurfaces)
+  std::vector<bool> dirs = {false, false, false, true, true, true, false};
+  std::vector<int> detail = {16, 16, 8, 8, 24, 24, 16};
+  for (int idx = 0; idx < m_detailSurfaces.size(); idx++)
   {
-    auto surfaceSegments = surface->extractPaths(7);
+    auto surface = m_detailSurfaces[idx];
+    auto surfaceSegments = surface->extractPaths(detail[idx], dirs[idx]);
     for (auto &segment : surfaceSegments)
     {
       std::transform(segment.begin(), segment.end(), segment.begin(), [](const math137::Vector3f &pos)
-                     { return pos / Config::SCALE + math137::Vector3f(0.f, Config::BASE_HEIGHT + 2.1f, 0.f); });
+                     { return pos / Config::SCALE + math137::Vector3f(0.f, Config::BASE_HEIGHT + 2.2f, 0.f); });
       segments.emplace_back(std::move(segment));
     }
   }
@@ -210,23 +213,23 @@ PathGenerator::generateBallSegments()
   return segments;
 }
 
-std::vector<std::vector<math137::Vector3f>> PathGenerator::generateFlatSegments(const std::vector<std::shared_ptr<IntersectionCurve>>& curves)
+std::vector<std::vector<math137::Vector3f>> PathGenerator::generateFlatSegments(const std::vector<std::shared_ptr<IntersectionCurve>> &curves)
 {
   std::vector<std::vector<math137::Vector3f>> segments;
 
-  const float R = Config::FLAT_BLADE_RADIUS;
-  const float eps = 0.1f * R;
-  const float step = (2.f * R - eps) * Config::SCALE;
+  constexpr float R = Config::FLAT_BLADE_RADIUS;
+  constexpr float eps = 0.1f * R;
+  constexpr float step = (2.f * R - eps) * Config::SCALE;
 
-  const float width = (Config::BLOCK_WIDTH + 4.f * R) * Config::SCALE;
-  const float depth = (Config::BLOCK_DEPTH + 4.f * R) * Config::SCALE;
+  constexpr float width = (Config::BLOCK_WIDTH + 1.5f * Config::FLAT_BLADE_RADIUS) * Config::SCALE;
+  constexpr float depth = (Config::BLOCK_DEPTH + 1.5f * Config::FLAT_BLADE_RADIUS) * Config::SCALE;
 
   // x coordinates in world-space where we will run the passes
-  const float halfW = width * 0.5f;
-  const float halfD = depth * 0.5f;
+  constexpr float halfW = width * 0.5f;
+  constexpr float halfD = depth * 0.5f;
 
-  float stepU = step / width;
-  float stepV = 0.01f;
+  constexpr float stepU = step / width;
+  constexpr float stepV = 0.01f;
 
   int texWidth = Intersectable::m_width;
   int texHeight = Intersectable::m_height;
@@ -296,7 +299,7 @@ std::vector<std::vector<math137::Vector3f>> PathGenerator::generateFlatSegments(
   int lineIdx = 0;
   std::vector<math137::Vector3f> segmentPoints;
   float prevV = 0.f;
-  for (float u = 0.f; u <= 1.f; u += stepU)
+  for (float u = 0.01f; u <= 1.f; u += stepU)
   {
     bool forward = (lineIdx % 2) == 0; // snake direction
     lineIdx++;
@@ -319,9 +322,9 @@ std::vector<std::vector<math137::Vector3f>> PathGenerator::generateFlatSegments(
     {
       if (m_flatGroundSurface->isTrimmedUV(u, v))
       {
-        prevV = v;
         break;
       }
+      prevV = v;
       math137::Vector3f pos = m_flatGroundSurface->getValue(u, v) / Config::SCALE;
       pos.y(Config::BASE_HEIGHT + 2.f);
 
@@ -354,15 +357,15 @@ std::vector<std::vector<math137::Vector3f>> PathGenerator::generateFlatSegments(
     {
       if (m_flatGroundSurface->isTrimmedUV(u, v))
       {
-        prevV = v;
         break;
       }
+      prevV = v;
       math137::Vector3f pos = m_flatGroundSurface->getValue(u, v) / Config::SCALE;
       pos.y(Config::BASE_HEIGHT + 2.f);
 
-     segmentPoints.emplace_back(pos);
+      segmentPoints.emplace_back(pos);
     }
-    std::cout << vStop <<std::endl;
+    std::cout << vStop << std::endl;
   }
 
   if (!segmentPoints.empty())
@@ -373,13 +376,13 @@ std::vector<std::vector<math137::Vector3f>> PathGenerator::generateFlatSegments(
   return segments;
 }
 
-std::vector<math137::Vector3f> PathGenerator::generateFlatSilhouetteSegment(const std::vector<std::shared_ptr<IntersectionCurve>>& curves)
+std::vector<math137::Vector3f> PathGenerator::generateFlatSilhouetteSegment(const std::vector<std::shared_ptr<IntersectionCurve>> &curves)
 {
-  auto findIntersectionFromPoint = [](const std::vector<math137::Vector3f>& points1, const std::vector<math137::Vector3f>& points2, int index = 0) {
-    
-    for (const auto& p1 : points1)
+  auto findIntersectionFromPoint = [](const std::vector<math137::Vector3f> &points1, const std::vector<math137::Vector3f> &points2, int index = 0)
+  {
+    for (const auto &p1 : points1)
     {
-      for (const auto& p2 : points2)
+      for (const auto &p2 : points2)
       {
         if ((p1 - p2).x() * (p1 - p2).x() + (p1 - p2).z() * (p1 - p2).z() < 1e-4f)
         {
@@ -389,11 +392,12 @@ std::vector<math137::Vector3f> PathGenerator::generateFlatSilhouetteSegment(cons
     }
     return math137::Vector3f();
   };
-  auto findClosestPointIndex = [](const std::vector<math137::Vector3f>& points, const math137::Vector3f& target) {
+  auto findClosestPointIndex = [](const std::vector<math137::Vector3f> &points, const math137::Vector3f &target)
+  {
     float minDist = std::numeric_limits<float>::max();
     math137::Vector3f closestPoint;
     int idx = -1;
-    for (const auto& p : points)
+    for (const auto &p : points)
     {
       float dist = (p - target).x() * (p - target).x() + (p - target).z() * (p - target).z();
       if (dist < minDist)
@@ -406,61 +410,161 @@ std::vector<math137::Vector3f> PathGenerator::generateFlatSilhouetteSegment(cons
     return idx;
   };
 
-  std::array<std::pair<float, float>, 6> ends = {{
-    {1.31891,-4.87327}, 
-    {-5.99868,-1.72829},
-    {-2.87555, 6.05587},
-    {-0.67814, 0.42583},
-    {1.01611, 0.45465},
-    {2.9638, 1.30208 }
-    }};
-    std::vector<int> dir = {
-      1, 1, 1, 1, 1, 1
-    };
+  std::array<std::pair<float, float>, 6> ends = {{{1.31891, -4.87327},
+                                                  {-5.99868, -1.72829},
+                                                  {-2.87555, 6.05587},
+                                                  {-0.67814, 0.42583},
+                                                  {1.01611, 0.45465},
+                                                  {2.9638, 1.30208}}};
+  std::vector<int> dir = {
+      1, 1, 1, 1, 1, 1};
 
   std::vector<math137::Vector3f> silhouettePoints;
-  math137::Vector3f startPoint = m_flatGroundSurface->getValue(0.f, 0.f) / Config::SCALE;
+  math137::Vector3f startPoint = m_flatGroundSurface->getValue(0.f, 1.f) / Config::SCALE - math137::Vector3f(Config::FLAT_BLADE_RADIUS, 0.f, 0.f);
   startPoint.y(Config::BASE_HEIGHT + 2.f);
   silhouettePoints.push_back(startPoint);
-  for(int i = 0; i < curves.size(); i++)
+  startPoint = m_flatGroundSurface->getValue(0.f, 0.f) / Config::SCALE - math137::Vector3f(Config::FLAT_BLADE_RADIUS, 0.f, 0.f);
+  startPoint.y(Config::BASE_HEIGHT + 2.f);
+  silhouettePoints.push_back(startPoint);
+  for (int i = 0; i < curves.size(); i++)
   {
-    //auto intersectionPoint = findIntersectionFromPoint(curves[i]->getPoints(), curves[i+1]->getPoints());
-    //std::cout << intersectionPoint<< std::endl;
+    // auto intersectionPoint = findIntersectionFromPoint(curves[i]->getPoints(), curves[i+1]->getPoints());
+    // std::cout << intersectionPoint<< std::endl;
     math137::Vector3f start{ends[i].first, 0.f, ends[i].second};
-    math137::Vector3f end{ends[(i+1) % ends.size()].first, 0.f, ends[(i+1) % ends.size()].second};
+    math137::Vector3f end{ends[(i + 1) % ends.size()].first, 0.f, ends[(i + 1) % ends.size()].second};
     int startIdx = findClosestPointIndex(curves[i]->getPoints(), start);
     int endIdx = findClosestPointIndex(curves[i]->getPoints(), end);
     if (startIdx == -1 || endIdx == -1)
       continue;
 
-      int size = curves[i]->getPointCount();
-      auto points = curves[i]->getPoints();
+    int size = curves[i]->getPointCount();
+    auto points = curves[i]->getPoints();
 
-      for(int j = startIdx; j != endIdx; j = (j + dir[i] + size) % size)
-      {
-        auto pos = points[j];
-        pos = pos / Config::SCALE;
-        pos.y(Config::BASE_HEIGHT + 2.f);
-        silhouettePoints.emplace_back(pos);
-      }
-
+    for (int j = startIdx; j != endIdx; j = (j + dir[i] + size) % size)
+    {
+      auto pos = points[j];
+      pos = pos / Config::SCALE;
+      pos.y(Config::BASE_HEIGHT + 2.f);
+      silhouettePoints.emplace_back(pos);
+    }
   }
   return silhouettePoints;
 }
 
-
-std::vector<std::vector<math137::Vector3f>> PathGenerator::generateDetailSilhouetteSegment()
+std::vector<std::vector<math137::Vector3f>> PathGenerator::generateDetailSilhouetteSegment(const std::vector<std::shared_ptr<IntersectionCurve>> &curves)
 {
-  auto configValues = Parser::ParseConfig("C:/Users/adam/Desktop/projekty/UIFVSI/core/config/contours.txt");
-  std::vector<std::vector<math137::Vector3f>> contours;
-  for (const auto &[idx, x, y] : configValues)
+  auto findIntersectionFromPoint = [](const std::vector<math137::Vector3f> &points1, const std::vector<math137::Vector3f> &points2, int index = 0)
   {
-    auto contour = m_detailSurfaces[idx]->extractContour(x, y);
-    std::transform(contour.begin(), contour.end(), contour.begin(), [](const math137::Vector3f &pos)
-                   { return pos / Config::SCALE + math137::Vector3f(0.f, Config::BASE_HEIGHT + 2.1f, 0.f); });
-    contours.emplace_back(std::move(contour));
+    for (const auto &p1 : points1)
+    {
+      for (const auto &p2 : points2)
+      {
+        if ((p1 - p2).x() * (p1 - p2).x() + (p1 - p2).z() * (p1 - p2).z() < 1e-4f)
+        {
+          std::cout << p1 << std::endl;
+        }
+      }
+    }
+    return math137::Vector3f();
+  };
+  auto findClosestPointIndex = [](const std::vector<math137::Vector3f> &points, const math137::Vector3f &target)
+  {
+    float minDist = std::numeric_limits<float>::max();
+    math137::Vector3f closestPoint;
+    int idx = -1;
+    for (const auto &p : points)
+    {
+      float dist = (p - target).x() * (p - target).x() + (p - target).z() * (p - target).z();
+      if (dist < minDist)
+      {
+        idx = &p - &points[0];
+        minDist = dist;
+        closestPoint = p;
+      }
+    }
+    return idx;
+  };
+
+  std::vector<std::pair<math137::Vector3f, math137::Vector3f>> ends = {
+    {{-0.849f, 0.f, 0.303}, {-3.390f, 0.2f, 0.204f}},
+    {{-2.770f, 0.f, 4.186f}, {-2.770f, 0.f, 5.820f}},
+    {{1.132f, 0.f, 0.397f}, {2.357f, 0.922f, 0.020f}},
+    {{2.357f, 0.922f, 0.020f}, {1.395f, 0.f, -4.795f}},
+    {{2.272f, 1.453f, -4.844f}, {2.272f, 1.453f, -4.844f}},
+    {{4.087, 1.275f, -4.472f}, {4.087f, 1.275f, -4.472f}},
+    {{-5.671, 0.f, 0.014f}, {-5.897f, 0.f, -1.670}},
+    {{2.357f, 0.922f, 0.020f}, {2.859f, 0.f, 1.187f}}
+  };
+  std::vector<int> dir = {
+      -1, -1, 1, -1, 1, 1, 1, 1};
+  std::vector<int> ind = {
+      0, 1, 2, 2, 4, 5, 6, 7};
+
+  std::vector<std::vector<math137::Vector3f>> silhouettePoints;
+  for (int i = 0; i < ends.size(); i++)
+  {
+
+    // auto intersectionPoint = findIntersectionFromPoint(curves[i]->getPoints(), curves[i+1]->getPoints());
+    // std::cout << intersectionPoint<< std::endl;
+    math137::Vector3f start = ends[i].first;
+    math137::Vector3f end = ends[i].second;
+    std::vector<math137::Vector3f>  currentSilhouette;
+    int startIdx = findClosestPointIndex(curves[i]->getPoints(), start);
+    int endIdx = findClosestPointIndex(curves[i]->getPoints(), end);
+    if (startIdx == -1 || endIdx == -1)
+      continue;
+
+    int size = curves[i]->getPointCount();
+    auto points = curves[i]->getPoints();
+    if(startIdx == endIdx)
+      endIdx = (endIdx - dir[i] + size) % size;
+
+    for (int j = startIdx; j != endIdx; j = (j + dir[i] + size) % size)
+    {
+      auto pos = points[j];
+      if(pos.y() < 0.f)
+        continue;
+      pos = pos / Config::SCALE + math137::Vector3f(0.f, Config::BASE_HEIGHT + 2.2f, 0.f);
+      currentSilhouette.emplace_back(pos);
+    }
+    silhouettePoints.emplace_back(std::move(currentSilhouette));
   }
-  return contours;
+  std::vector<math137::Vector3f> groundSilhouette;
+  std::vector<int> groundStartIdx = {8, 10, 12};
+  std::vector<std::pair<math137::Vector3f, math137::Vector3f>> groundEnds = {
+    {{-2.78591f, 0.f, 4.26807f}, {-3.43995f, 0.f, 0.200898f}},
+    {{-3.43995f, 0.f, 0.200898f}, {-5.6572f, 0.f, 0.042827f}},
+    {{-5.6572f, 0.f, 0.042827f}, {-2.78591f, 0.f, 4.26807f}},
+  };
+  std::vector<int> dirGround = {
+      -1, -1, -1};
+
+  for (int i = 0; i < groundEnds.size(); i++)
+  {
+
+    //auto intersectionPoint = findIntersectionFromPoint(curves[groundStartIdx[i]]->getPoints(), curves[groundStartIdx[(i+1) % 3]]->getPoints());
+    //std::cout << intersectionPoint<< std::endl;
+    math137::Vector3f start = groundEnds[i].first;
+    math137::Vector3f end = groundEnds[i].second;
+    int startIdx = findClosestPointIndex(curves[groundStartIdx[i]]->getPoints(), start);
+    int endIdx = findClosestPointIndex(curves[groundStartIdx[i]]->getPoints(), end);
+    if (startIdx == -1 || endIdx == -1)
+      continue;
+
+    int size = curves[groundStartIdx[i]]->getPointCount();
+    auto points = curves[groundStartIdx[i]]->getPoints();
+    if(startIdx == endIdx)
+      endIdx = (endIdx - dirGround[i] + size) % size;
+
+    for (int j = startIdx; j != endIdx; j = (j + dirGround[i] + size) % size)
+    {
+      auto pos = points[j];
+      pos = pos / Config::SCALE + math137::Vector3f(0.f, Config::BASE_HEIGHT + 2.2f, 0.f);
+      groundSilhouette.emplace_back(pos);
+    }
+  }
+  silhouettePoints.emplace_back(std::move(groundSilhouette));
+  return silhouettePoints;
 }
 
 void PathGenerator::generateDetailTrimming()
@@ -490,15 +594,21 @@ PathGenerator::generateBallPath(const std::unique_ptr<SceneManager> &manager)
   m_detailGroundSurface->unionTrimmingTexture(333, 211);
 
   auto ground = m_detailGroundSurface->gridMillingPath(0.01f, 0.01f);
-  auto groundSilhouette = m_detailGroundSurface->extractContour(300, 110);
   std::transform(ground.begin(), ground.end(), ground.begin(), [](const math137::Vector3f &pos)
                  { return pos / Config::SCALE + math137::Vector3f(0.f, Config::BASE_HEIGHT + 2.f, 0.f); });
-  std::transform(groundSilhouette.begin(), groundSilhouette.end(), groundSilhouette.begin(), [](const math137::Vector3f &pos)
-                 { return pos / Config::SCALE + math137::Vector3f(0.f, Config::BASE_HEIGHT + 2.f, 0.f); });
   segments.emplace_back(std::move(ground));
-  segments.emplace_back(std::move(groundSilhouette));
   // std::vector<std::vector<math137::Vector3f>> segments;
-  auto silhouetteSegment = generateDetailSilhouetteSegment();
+  auto objects = manager->getObjects();
+  std::vector<std::shared_ptr<IntersectionCurve>> curves;
+  for (const auto &obj : objects)
+  {
+    if (!obj)
+      continue;
+    if (auto ic = std::dynamic_pointer_cast<IntersectionCurve>(obj))
+      curves.push_back(ic);
+  }
+
+  auto silhouetteSegment = generateDetailSilhouetteSegment(curves);
 
   segments.insert(segments.end(), silhouetteSegment.begin(), silhouetteSegment.end());
 
@@ -534,8 +644,17 @@ PathGenerator::generateFlatPath(const std::unique_ptr<SceneManager> &manager)
   }
   // collect intersection curves from the scene manager
   std::vector<std::shared_ptr<IntersectionCurve>> curves;
-  for (const auto &obj : manager->getObjects()) {
-    if (!obj) continue;
+  pathPoints.push_back({0.f, Config::BLOCK_HEIGHT, 0.f});
+  math137::Vector3f start = m_flatGroundSurface->getValue(0.f, 0.f) / Config::SCALE - math137::Vector3f(Config::FLAT_BLADE_RADIUS, 0.f, Config::FLAT_BLADE_RADIUS);
+  start.y(Config::BLOCK_HEIGHT + 2.f);
+  pathPoints.push_back(start);
+  start.y(Config::BASE_HEIGHT + 2.f);
+  pathPoints.push_back(start);
+
+  for (const auto &obj : manager->getObjects())
+  {
+    if (!obj)
+      continue;
     if (auto ic = std::dynamic_pointer_cast<IntersectionCurve>(obj))
       curves.push_back(ic);
   }
@@ -543,9 +662,11 @@ PathGenerator::generateFlatPath(const std::unique_ptr<SceneManager> &manager)
   // read `flat.txt` as an ordered list of curve indices (preferred)
   std::vector<std::shared_ptr<IntersectionCurve>> selectedCurves;
   std::ifstream in("C:/Users/adam/Desktop/projekty/UIFVSI/core/config/flat.txt");
-  if (in && !curves.empty()) {
+  if (in && !curves.empty())
+  {
     int idx;
-    while (in >> idx) {
+    while (in >> idx)
+    {
       selectedCurves.push_back(curves[13 + idx]);
       std::cout << curves[13 + idx]->name << std::endl;
     }

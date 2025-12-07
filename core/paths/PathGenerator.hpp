@@ -17,7 +17,7 @@ public:
     void createMillingSurface(const std::unique_ptr<SceneManager> &manager, float radius);
 private:
     std::vector<math137::Vector3f> generateFlatSilhouetteSegment(const std::vector<std::shared_ptr<IntersectionCurve>>& curves);
-    std::vector<std::vector<math137::Vector3f>> generateDetailSilhouetteSegment();
+    std::vector<std::vector<math137::Vector3f>> generateDetailSilhouetteSegment(const std::vector<std::shared_ptr<IntersectionCurve>>& curves);
     void generateDetailTrimming();
     void remapPoints(const std::vector<std::weak_ptr<Object>> &objects);
     std::vector<std::vector<float>> generateHeightMap();

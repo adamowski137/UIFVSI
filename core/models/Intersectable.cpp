@@ -4,6 +4,7 @@
 #include <stack>
 #include <set>
 #include <iostream>
+#include <algorithm>
 
 Intersectable::Intersectable()
 {
@@ -214,9 +215,9 @@ std::vector<math137::Vector3f> Intersectable::extractContour(int sx, int sy) con
       int nd = (startDir + i) % 8;
       int nx = x + nx8[nd];
       int ny = y + ny8[nd];
-      if((x < 0 || x >= m_width) && !wrappableV())
+      if ((x < 0 || x >= m_width) && !wrappableV())
         continue; // poza granicami
-      if((y < 0 || y >= m_height) && !wrappableU())
+      if ((y < 0 || y >= m_height) && !wrappableU())
         continue; // poza granicami
       nx = (nx + m_width) % m_width;
       ny = (ny + m_height) % m_height;
@@ -265,22 +266,38 @@ std::pair<int, int> Intersectable::findFirstContourPoint(int startX, int startY)
   return std::pair<int, int>(sx, sy);
 }
 
-std::vector<std::vector<math137::Vector3f>> Intersectable::extractPaths(int step) const
+std::vector<std::vector<math137::Vector3f>> Intersectable::extractPaths(int step, bool dir) const
 {
   std::vector<std::vector<math137::Vector3f>> res;
   std::vector<uint8_t> temp = m_trimmingData;
-  for (int y = 0; y < m_height; y += step)
+  int iterations = (m_width * m_height) / (step * step);
+  int x = 256;
+  int y = 256;
+  for (int i = 0; i < iterations; i++)
   {
-    for (int x = 0; x < m_width; x += step)
+    if (temp[y * m_width + x] == 0)
     {
-      if (temp[y * m_width + x] != 0)
-        continue;
 
-      auto path = extractPath(x, y, temp, step);
+      auto path = extractPath(x, y, temp, step, dir);
       if (path.size() > 2)
       {
         res.push_back(path);
       }
+    }
+
+    if (dir)
+    {
+      y += step;
+      x += (y / m_height) * step;
+      y = y % m_height;
+      x = x % m_width;
+    }
+    else
+    {
+      x += step;
+      y += (x / m_width) * step;
+      x = x % m_width;
+      y = y % m_height;
     }
   }
   return res;
@@ -298,8 +315,7 @@ std::vector<math137::Vector3f> Intersectable::extractPath(int x, int y, std::vec
 
   std::vector<math137::Vector3f> path;
   std::stack<State> s;
-  s.push({x, y, step, 1});
-  int yMul = 1;
+  s.push({x, y, 1, 0});
   while (!s.empty())
   {
     auto state = s.top();
@@ -317,46 +333,79 @@ std::vector<math137::Vector3f> Intersectable::extractPath(int x, int y, std::vec
 
     if (temp[state.y * m_width + state.x] != 0 && state.wall == 0)
       continue;
-   
+
     if (!(normal.any(
-                                 [](float coord)
-                                 { return std::isnan(coord) || std::isinf(coord); })))
-   {
-    path.emplace_back(pos);
-   }
+            [](float coord)
+            { return std::isnan(coord) || std::isinf(coord); })))
+    {
+      path.emplace_back(pos);
+    }
 
     temp[state.y * m_width + state.x] = 255; // oznacz jako odwiedzony
-    int nx = state.x + state.dir;
-    int ny = state.y + step * yMul;
+
+    int nx = state.x + (checkYFirst ? state.dir * step : state.dir);
+    int ny = state.y + (checkYFirst ? state.dir : state.dir * step);
+    int px = state.x - (checkYFirst ? state.dir : state.dir * step);
+    int py = state.y - (checkYFirst ? state.dir * step : state.dir);
     if (wrappableU())
       ny = (ny + m_height) % m_height;
     if (wrappableV())
       nx = (nx + m_width) % m_width;
 
     bool canMoveX = (nx >= 0 && nx < m_width && m_trimmingData[state.y * m_width + nx] == 0);
-    bool canMoveY = (ny >= 0 && ny < m_height && temp[ny * m_width + state.x] == 0);
+    bool canMoveY = (ny >= 0 && ny < m_height && m_trimmingData[ny * m_width + state.x] == 0);
+    bool canMoveXY = (nx >= 0 && nx < m_width && ny >= 0 && ny < m_height && temp[ny * m_width + nx] == 0);
+    bool canMovePX = (px >= 0 && px < m_width && ny >= 0 && ny < m_height && temp[state.y * m_width + px] == 0);
+    bool canMovePY = (py >= 0 && py < m_height && nx >= 0 && nx < m_width && temp[py * m_width + state.x] == 0);
+    bool canMovePXY = (px >= 0 && px < m_width && py >= 0 && py < m_height && temp[py * m_width + px] == 0);
 
-    // If requested, when on wall==1 try vertical move first
-    if (checkYFirst && state.wall == 1 && canMoveY)
+    if (state.wall == 2)
     {
-      s.push({state.x, ny, -state.dir, 0});
+
+      if (canMoveXY)
+      {
+        s.push({nx, ny, state.dir, 0});
+        continue;
+      }
+      if (canMoveY)
+      {
+        s.push({state.x, ny, state.dir, 0});
+        continue;
+      }
+      if (canMoveX)
+      {
+        s.push({nx, state.y, state.dir, 0});
+        continue;
+      }
+      if (canMovePXY)
+      {
+        s.push({px, py, -state.dir, 0});
+        continue;
+      }
+      if (canMovePY)
+      {
+        s.push({state.x, py, -state.dir, 0});
+        continue;
+      }
+      if (canMovePX)
+      {
+        s.push({px, state.y, -state.dir, 0});
+        continue;
+      }
+    }
+    if (checkYFirst && canMoveY)
+    {
+      s.push({state.x, ny, state.dir, state.wall});
       continue;
     }
-
-    if (canMoveX)
+    if (!checkYFirst && canMoveX)
     {
       s.push({nx, state.y, state.dir, state.wall});
       continue;
     }
 
-    // If not checked earlier, try vertical move when appropriate
-    if (!checkYFirst && state.wall == 1 && canMoveY)
-    {
-      s.push({state.x, ny, -state.dir, 0});
-      continue;
-    }
 
-    if (state.wall == 2 && yMul > 0)
+    if (state.wall == 2)
     {
       break;
     }
@@ -375,48 +424,48 @@ std::vector<math137::Vector3f> Intersectable::extractPath(int x, int y, std::vec
 
 std::vector<math137::Vector3f> Intersectable::gridMillingPath(float stepU, float stepV) const
 {
-    std::vector<math137::Vector3f> path;
-    bool direction = true;
-    for (float v = 0.0f; v <= 1.0f; v += stepV)
+  std::vector<math137::Vector3f> path;
+  bool direction = true;
+  for (float v = 0.0f; v <= 1.0f; v += stepV)
+  {
+    if (direction)
     {
-        if (direction)
-        {
-            for (float u = 0.0f; u <= 1.0f; u += stepU)
-            {
-                if(!isTrimmedUV(u, v))
-                    path.push_back(getValue(u, v));
-            }
-        }
-        else
-        {
-            for (float u = 1.0f; u >= 0.0f; u -= stepU)
-            {
-                if(!isTrimmedUV(u, v))
-                    path.push_back(getValue(u, v));
-            }
-        }
-        direction = !direction;
+      for (float u = 0.0f; u <= 1.0f; u += stepU)
+      {
+        if (!isTrimmedUV(u, v))
+          path.push_back(getValue(u, v));
+      }
     }
-    for (float u = 0.0f; u <= 1.0f; u += stepU)
+    else
     {
-        if (direction)
-        {
-            for (float v = 0.0f; v <= 1.0f; v += stepV)
-            {
-                if(!isTrimmedUV(u, v))
-                    path.push_back(getValue(u, v));
-            }
-        }
-        else
-        {
-            for (float v = 1.0f; v >= 0.0f; v -= stepV)
-            {
-                if(!isTrimmedUV(u, v))
-                    path.push_back(getValue(u, v));
-            }
-        }
-        direction = !direction;
+      for (float u = 1.0f; u >= 0.0f; u -= stepU)
+      {
+        if (!isTrimmedUV(u, v))
+          path.push_back(getValue(u, v));
+      }
     }
+    direction = !direction;
+  }
+  for (float u = 0.0f; u <= 1.0f; u += stepU)
+  {
+    if (direction)
+    {
+      for (float v = 0.0f; v <= 1.0f; v += stepV)
+      {
+        if (!isTrimmedUV(u, v))
+          path.push_back(getValue(u, v));
+      }
+    }
+    else
+    {
+      for (float v = 1.0f; v >= 0.0f; v -= stepV)
+      {
+        if (!isTrimmedUV(u, v))
+          path.push_back(getValue(u, v));
+      }
+    }
+    direction = !direction;
+  }
 
-    return path;
+  return path;
 }
