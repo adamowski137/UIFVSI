@@ -2,6 +2,43 @@
 
 Universal Interface for Virtual Space Interaction is a CAD/CAM software focused on geometric modeling, surface editing, and manufacturing preparation.
 
+## Getting started
+
+### Clone the repository
+
+To clone the project with all nested dependencies included, use:
+
+```bash
+git clone --recursive https://github.com/adamowski137/UIFVSI.git
+```
+
+### Prerequisites
+
+- CMake 3.30 or newer
+- A C++20-compatible compiler
+- OpenGL support
+- A Windows development environment such as Visual Studio or Ninja with MSVC
+
+### Configure and build
+
+From the repository root, configure the project with CMake and build it:
+
+```bash
+cmake -S . -B build
+cmake --build build 
+```
+
+### Run the application
+
+After the build completes, run the executable from the generated output folder, typically:
+
+```bash
+./build/Debug/uifvsi.exe
+./build/uifvsi
+```
+
+The project copies its shader assets into the runtime directory during the build, so you can start working with the application immediately after a successful build.
+
 ## Overview
 
 This application is capable of creating and manipulating a wide range of geometric objects, including:
