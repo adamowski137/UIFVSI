@@ -2,6 +2,26 @@
 
 Universal Interface for Virtual Space Interaction is a CAD/CAM software focused on geometric modeling, surface editing, and manufacturing preparation.
 
+## Example outputs
+
+### Example model created in the software
+
+![Example cat model created in the software](img/model.jpg)
+
+This example shows a model of a cat created directly in the application.
+
+### Real-world result after milling
+
+![Real-world wooden milling result](img/real.jpg)
+
+This image shows the cat shape milled into a wooden table after the toolpaths were generated from the modeled geometry.
+
+### Example object types available in the system
+
+![Example objects supported by the software](img/objects.jpg)
+
+This image presents representative objects that can be added and manipulated within the system.
+
 ## Getting started
 
 ### Clone the repository
@@ -68,22 +88,4 @@ The software supports working with free-form surface models, including advanced 
 
 These capabilities make the project suitable for both digital model design and downstream real-world fabrication workflows.
 
-## Example outputs
 
-### Example model created in the software
-
-![Example cat model created in the software](img/model.jpg)
-
-This example shows a model of a cat created directly in the application.
-
-### Real-world result after milling
-
-![Real-world wooden milling result](img/real.jpg)
-
-This image shows the cat shape milled into a wooden table after the toolpaths were generated from the modeled geometry.
-
-### Example object types available in the system
-
-![Example objects supported by the software](img/objects.jpg)
-
-This image presents representative objects that can be added and manipulated within the system.
