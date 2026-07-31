@@ -39,6 +39,10 @@ After the build completes, run the executable from the generated output folder, 
 
 The project copies its shader assets into the runtime directory during the build, so you can start working with the application immediately after a successful build.
 
+## Purpose
+
+UIFVSI combines modeling, analysis, and manufacturing preparation in one workflow, allowing users to design 3D geometry and prepare it for physical production through generated cutting paths.
+
 ## Overview
 
 This application is capable of creating and manipulating a wide range of geometric objects, including:
@@ -83,7 +87,3 @@ This image shows the cat shape milled into a wooden table after the toolpaths we
 ![Example objects supported by the software](img/objects.jpg)
 
 This image presents representative objects that can be added and manipulated within the system.
-
-## Purpose
-
-UIFVSI combines modeling, analysis, and manufacturing preparation in one workflow, allowing users to design 3D geometry and prepare it for physical production through generated cutting paths.
